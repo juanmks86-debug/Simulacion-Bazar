@@ -32,15 +32,35 @@ npm run preview   # prueba el build local
 
 ```
 src/
-  main.jsx                 HashRouter + estilos
-  App.jsx                  Rutas (React Router)
-  routes.js                Lista de rutas / menú
-  components/Sidebar.jsx   Menú lateral con NavLink
-  components/Dashboard.jsx Monta el contenido una vez y muestra/oculta bloques por ruta
-  legacy/content.html      Contenido original (cada bloque con data-pages)
-  legacy/engine.js         Motor de simulación original (initBazar)
-  legacy/bazar.css         Estilos originales
+  main.jsx                  HashRouter + estilos
+  App.jsx                   Rutas (React Router)
+  routes.js                 Lista de rutas / menú
+  components/
+    Sidebar.jsx             Menú lateral con NavLink
+    Dashboard.jsx           Monta el contenido una vez, muestra/oculta bloques por ruta y monta los componentes React (portales)
+    Kpis.jsx · ClientList.jsx · EventLog.jsx · SalesChart.jsx · CatalogRows.jsx   (componentes React)
+  hooks/useSim.js           Lee el estado de la simulación (useSyncExternalStore)
+  sim/
+    store.js                Estado visible que publica el motor (KPIs, clientes, registro, unidades)
+    catalog.js              Productos, promociones, perfiles de cliente, nombres, CRISP-DM
+    constants.js            Geometría de la tienda y cámara
+    gfx.js                  Dibujo isométrico: primitivas, sprites, góndolas, personas
+    audio.js                Sonido (Web Audio)
+    stats.js                Monte Carlo (función pura)
+  legacy/
+    engine.js               Lógica de la simulación, bucle y eventos (~1000 líneas)
+    content.html            HTML original (cada bloque con data-pages)
+    bazar.css               Estilos originales
 ```
+
+## Qué ya es React y qué sigue siendo HTML original
+
+Ya son componentes React: KPIs, clientes en tienda, registro de eventos, gráfico de ventas y catálogo.
+Siguen como HTML original dentro de `legacy/content.html`: cabecera, controles, canvas, Monte Carlo (gráfico), Bootstrap, calculadora, Apriori, escenarios y CRISP-DM.
+
+Los parámetros (llegada, conversión, canasta, velocidad, promoción) se guardan en `localStorage` y se restauran al recargar.
+
+`npm run lint` revisa el código con ESLint.
 
 La simulación sigue corriendo al cambiar de ruta. Atajos: Espacio (pausa), R (reiniciar), M (sonido), Z (modo ampliado), 1/2/3 (cámaras).
 
