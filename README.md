@@ -1,67 +1,57 @@
-# Bazar Inteligente · React + React Router
+# Bazar Inteligente · React + TypeScript + React Router
 
-Versión en React del archivo `bazar_inteligente_con_menu.html` (Simulación 3D isométrica + Business Intelligence · IES N.º 6).
+Plataforma de Minería de Datos del caso **Pack Mesa Completa** (IES N.º 6, Perico, Jujuy): simulación 3D isométrica de un bazar, KPIs en vivo, Monte Carlo, Bootstrap, reglas Apriori, calculadora de margen y más.
 
 ## Cómo usarlo
 
 ```bash
 npm install
-npm run dev       # desarrollo en http://localhost:5173
-npm run build     # genera la carpeta dist/ lista para subir (Vercel, Netlify, GitHub Pages...)
-npm run preview   # prueba el build local
+npm run dev          # desarrollo en http://localhost:5173
+npm run build        # chequea tipos y genera dist/ (Vercel, Netlify, GitHub Pages...)
+npm run preview      # prueba el build local
 ```
+
+No abras `dist/index.html` con doble clic (los navegadores bloquean módulos desde `file://`): usá `npm run preview` o un hosting.
+Para Vercel: framework "Vite", build `npm run build`, salida `dist`.
+
+## Scripts de calidad
+
+| Comando | Qué hace |
+|---|---|
+| `npm run typecheck` | TypeScript (`strict`) |
+| `npm run lint` | ESLint (TS + React + hooks) |
+| `npm test` | 36+ tests (Vitest + Testing Library): precios y promociones, calculadora, Monte Carlo, histograma, parámetros guardados, stores, rutas y componentes |
+| `npm run test:regression` | Opcional (~1 min): corre la simulación completa en jsdom con azar y reloj fijos y la compara con `tests/regression/golden-900.json`. Sirve para comprobar que un refactor **no cambió el comportamiento**. `-- --full` usa 3600 cuadros. Necesita el paquete `canvas` (es opcional; si no se instala, el resto funciona igual) |
 
 ## Rutas (HashRouter)
 
-| Ruta | Sección |
-|---|---|
-| `#/` | Inicio (advertencia metodológica + KPIs) |
-| `#/simulacion` | Simulación 3D + controles + clientes |
-| `#/parametros` | Control del flujo comercial |
-| `#/indicadores` | KPIs |
-| `#/montecarlo` | Monte Carlo |
-| `#/bootstrap` | Estabilidad Bootstrap |
-| `#/calculadora` | Calculadora de margen |
-| `#/reglas` · `#/apriori-fp` | Apriori · Apriori vs FP-Growth |
-| `#/sensibilidad` · `#/piloto` | Test de sensibilidad · Plan piloto |
-| `#/crisp` | CRISP-DM |
-| `#/productos` · `#/ventas` · `#/escenarios` | Catálogo · Ventas · Escenarios |
-| `#/academico` · `#/eventos` | Ficha académica · Registro |
+`#/` Inicio · `#/simulacion` · `#/parametros` · `#/indicadores` · `#/montecarlo` · `#/bootstrap` · `#/calculadora` · `#/reglas` · `#/apriori-fp` · `#/sensibilidad` · `#/piloto` · `#/crisp` · `#/productos` · `#/ventas` · `#/escenarios` · `#/academico` · `#/eventos`
+
+La simulación sigue corriendo al cambiar de ruta (el canvas y los controles están siempre montados). `Monte Carlo` se descarga bajo demanda porque trae la librería de gráficos.
+Atajos: Espacio (pausa), R (reiniciar), M (sonido), Z (modo ampliado), 1/2/3 (cámaras). No actúan mientras escribís en un campo ni con un botón enfocado.
 
 ## Estructura
 
 ```
 src/
-  main.jsx                  HashRouter + estilos
-  App.jsx                   Rutas (React Router)
-  routes.js                 Lista de rutas / menú
-  components/
-    Sidebar.jsx             Menú lateral con NavLink
-    Dashboard.jsx           Monta el contenido una vez, muestra/oculta bloques por ruta y monta los componentes React (portales)
-    Kpis.jsx · ClientList.jsx · EventLog.jsx · SalesChart.jsx · CatalogRows.jsx   (componentes React)
-  hooks/useSim.js           Lee el estado de la simulación (useSyncExternalStore)
+  main.tsx · App.tsx · routes.ts      Entrada, rutas y qué muestra cada una
+  components/   Layout, Sidebar, Header, Controls, SimulationArea (canvas), Kpis, ClientList, CatalogRows
+  sections/     Una por bloque de contenido: MonteCarlo (Recharts), Calculator, Crisp, Scenarios, Sales, Events,
+                Catalog y las estáticas (Callout, Bootstrap, RulesApriori, AprioriVsFp, Sensitivity, Pilot, Academic)
+  hooks/        useStore, useSim, useShortcuts
   sim/
-    store.js                Estado visible que publica el motor (KPIs, clientes, registro, unidades)
-    catalog.js              Productos, promociones, perfiles de cliente, nombres, CRISP-DM
-    constants.js            Geometría de la tienda y cámara
-    gfx.js                  Dibujo isométrico: primitivas, sprites, góndolas, personas
-    audio.js                Sonido (Web Audio)
-    stats.js                Monte Carlo (función pura)
-  legacy/
-    engine.js               Lógica de la simulación, bucle y eventos (~1000 líneas)
-    content.html            HTML original (cada bloque con data-pages)
-    bazar.css               Estilos originales
+    createStore.ts · store.ts · params.ts · uiStore.ts · controller.ts   Estado (TS): lo que publica el motor, parámetros
+                                                                          guardados en localStorage, menú, y puente React → motor
+    catalog.ts · constants.ts · pricing.ts · calculator.ts · stats.ts · audio.ts · audioInstance.ts   Datos y funciones puras (TS)
+    state.js · helpers.js · logic.js · render.js · particles.js · gfx.js · engine.js                    Motor (JS): estado mutable,
+                                                                          horarios y promoción, clientes/cola/empleado,
+                                                                          dibujo 3D, textos flotantes, sprites y orquestación
+  styles/bazar.css
+tests/          Vitest + regresión determinista
 ```
 
-## Qué ya es React y qué sigue siendo HTML original
+## Estado de la migración
 
-Ya son componentes React: KPIs, clientes en tienda, registro de eventos, gráfico de ventas y catálogo.
-Siguen como HTML original dentro de `legacy/content.html`: cabecera, controles, canvas, Monte Carlo (gráfico), Bootstrap, calculadora, Apriori, escenarios y CRISP-DM.
-
-Los parámetros (llegada, conversión, canasta, velocidad, promoción) se guardan en `localStorage` y se restauran al recargar.
-
-`npm run lint` revisa el código con ESLint.
-
-La simulación sigue corriendo al cambiar de ruta. Atajos: Espacio (pausa), R (reiniciar), M (sonido), Z (modo ampliado), 1/2/3 (cámaras).
-
-Para subir a Vercel: importá el repositorio, framework "Vite", build `npm run build`, salida `dist`.
+- **React + TypeScript (strict):** toda la interfaz, los stores, el catálogo, los precios, la calculadora, la estadística y el audio.
+- **JavaScript (motor):** `state/helpers/logic/render/particles/gfx/engine`. Son ~1.800 líneas con estado mutable compartido y dibujo en canvas. Pasarlos a TypeScript es el siguiente paso natural; ya están separados por responsabilidad y cubiertos por la prueba de regresión.
+- Los parámetros (llegada, conversión, canasta, velocidad, promoción) se guardan en el navegador y se validan al cargar.
