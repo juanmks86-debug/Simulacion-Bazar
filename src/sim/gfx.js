@@ -1,7 +1,7 @@
 /* Motor gráfico isométrico: primitivas, sprites, mobiliario y personas.
    Dibuja sobre el contexto activo (setCtx). Sin dependencias del DOM. */
-import { C, S, ZS, OX, OY, WH, cam } from './constants.js';
-import { PROD, ST, CAP } from './catalog.js';
+import { C, S, ZS, OX, OY, WH, cam } from './constants';
+import { PROD, ST, CAP } from './catalog';
 
 let x = null, CW = 1240, CHt = 830;
 export const setCtx = c => { x = c; };
