@@ -21,7 +21,7 @@ Para Vercel: framework "Vite", build `npm run build`, salida `dist`.
 | `npm run typecheck` | TypeScript (`strict`) |
 | `npm run lint` | ESLint (TS + React + hooks) |
 | `npm test` | 36+ tests (Vitest + Testing Library): precios y promociones, calculadora, Monte Carlo, histograma, parámetros guardados, stores, rutas y componentes |
-| `npm run test:regression` | Opcional (~1 min): corre la simulación completa en jsdom con azar y reloj fijos y la compara con `tests/regression/golden-900.json`. Sirve para comprobar que un refactor **no cambió el comportamiento**. `-- --full` usa 3600 cuadros. Necesita el paquete `canvas` (es opcional; si no se instala, el resto funciona igual) |
+| `npm run test:regression` | Opcional (~1 min): corre la simulación completa en jsdom con azar y reloj fijos y la compara con `tests/regression/golden-900.json`. Sirve para comprobar que un refactor **no cambió el comportamiento**. `-- --full` usa 3600 cuadros. Necesita `npm i --no-save canvas` (no está en package.json para que la instalación y Vercel no dependan de él) |
 
 ## Rutas (HashRouter)
 
