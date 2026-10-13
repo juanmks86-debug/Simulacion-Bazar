@@ -1,11 +1,13 @@
 import { useEffect } from 'react'
 import { controller } from '../sim/controller'
+import { presentationStore } from '../sim/presentation'
 import { toggleCollapsed } from '../sim/uiStore'
 
 // Atajos para la defensa: Espacio (pausa), R (reiniciar), M (sonido), Z (modo ampliado), 1/2/3 (cámaras)
 export function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (presentationStore.getSnapshot().active) return // en modo presentación las teclas son de la presentación
       const t = e.target as HTMLElement | null
       if (t && /^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(t.tagName)) return
       if (e.code === 'Space') { e.preventDefault(); controller.setRunning(!controller.isRunning()) }

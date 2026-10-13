@@ -8,6 +8,7 @@ import { initBazar } from '../sim/engine'
 import Sidebar from './Sidebar'
 import Header from './Header'
 import SimulationArea from './SimulationArea'
+import PresentationBar from './PresentationBar'
 
 export default function Layout() {
   const { pathname } = useLocation()
@@ -29,6 +30,7 @@ export default function Layout() {
         <Outlet />
         <SimulationArea showCanvas={route.path === '/simulacion'} showPanel={route.path === '/simulacion' || route.path === '/parametros'} />
       </div>
+      <PresentationBar />
     </>
   )
 }

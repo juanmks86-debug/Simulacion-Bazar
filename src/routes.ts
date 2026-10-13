@@ -15,8 +15,10 @@ export const ROUTES: RouteMeta[] = [
   { path: '/piloto',       icon: '🚀', label: 'Plan de Prueba Piloto' },
   { path: '/crisp',        icon: '🔄', label: 'Metodología CRISP-DM' },
   { path: '/productos',    icon: '▤',  label: 'Catálogo & Precios Reales' },
+  { path: '/datos',        icon: '📁', label: 'Datos reales (CSV)' },
   { path: '/ventas',       icon: '▥',  label: 'Ventas por Producto' },
   { path: '/escenarios',   icon: '⇄',  label: 'Comparador Escenarios' },
   { path: '/academico',    icon: '🎓', label: 'Ficha Académica & Autor' },
   { path: '/eventos',      icon: '☷',  label: 'Registro de Eventos' },
+  { path: '/informe',      icon: '🖨', label: 'Informe (PDF)' },
 ]

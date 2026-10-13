@@ -582,3 +582,29 @@ canvas#mcCanvas {
 /* --- React Router: visibilidad por ruta --- */
 .is-hidden{display:none!important}
 .single{grid-template-columns:1fr!important}
+
+/* --- Modo presentación --- */
+body.presenting .header-card { display: none; }
+body.presenting .wrap { padding-bottom: 150px; }
+.presentation-bar { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 60; width: min(900px, calc(100vw - 24px)); background: rgba(12, 19, 15, 0.96); border: 1px solid var(--bd-focus); border-radius: 14px; padding: 10px 14px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); }
+.presentation-notes { margin: 0 0 8px; padding-left: 18px; color: var(--tx); font-size: 14px; line-height: 1.5; }
+.presentation-controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.presentation-title { flex: 1; min-width: 180px; font-size: 13px; color: var(--tx); }
+.presentation-progress { height: 4px; background: #233628; border-radius: 4px; margin-top: 5px; overflow: hidden; }
+.presentation-progress > div { height: 100%; background: var(--gold); transition: width 0.25s; }
+.presentation-bar .mini-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* --- Impresión / PDF del informe --- */
+@media print {
+  @page { size: A4; margin: 12mm; }
+  html, body { background: #fff !important; color: #111 !important; padding: 0 !important; }
+  .side-menu, .menu-toggle, .side-overlay, .header-card, .grid-main, .presentation-bar, .no-print { display: none !important; }
+  .wrap { max-width: none !important; margin: 0 !important; padding: 0 !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-shadow: none !important; }
+  .card, .mc-kpi, .calc-result-box, .metricbox { background: #fff !important; border: 1px solid #bbb !important; color: #111 !important; break-inside: avoid; }
+  .card *, h1, h2, h3 { color: #111 !important; }
+  .custom-table th { background: #eee !important; }
+  .custom-table td, .custom-table th { border-color: #ccc !important; }
+  .report-h { color: #111 !important; border-bottom: 2px solid #333; padding-bottom: 3px; margin-top: 14px; break-after: avoid; }
+}
+.report-h { font-size: 16px; margin: 18px 2px 8px; color: var(--gold); }

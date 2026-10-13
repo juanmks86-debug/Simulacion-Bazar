@@ -1,6 +1,7 @@
 import { useSim } from '../hooks/useSim'
 import { useStore } from '../hooks/useStore'
 import { controller } from '../sim/controller'
+import { startPresentation } from '../sim/presentation'
 import { toggleCollapsed, uiStore } from '../sim/uiStore'
 
 export default function Header() {
@@ -26,6 +27,7 @@ export default function Header() {
         <button className="btn" id="pa" onClick={() => controller.setRunning(false)}>⏸ Pausar</button>
         <button className="btn" id="re" onClick={() => controller.reset()}>↻ Reiniciar</button>
         <button className="btn" id="full" onClick={() => controller.toggleFullscreen()}>⛶ Pantalla Completa</button>
+        <button className="btn btn-primary" id="present" onClick={startPresentation}>🎤 Presentar</button>
         <button className="btn btn-gold" id="csv" onClick={() => controller.exportCsv()}>⇩ Exportar CSV</button>
       </div>
     </div>

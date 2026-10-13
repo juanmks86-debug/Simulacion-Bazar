@@ -1,8 +1,13 @@
 /* Estadística pura (sin DOM): Evaluación financiera Monte Carlo, 10.000 escenarios. */
 export interface MonteCarloResult { meanA: number; meanB: number; diffMean: number; winRate: number; histDiff: number[] }
 
-/** 10.000 escenarios; `rand` se puede inyectar para tests reproducibles. */
-export function monteCarlo(rand: () => number = Math.random): MonteCarloResult {
+export interface MonteCarloOptions { multMin?: number; multMax?: number }
+
+/**
+ * 10.000 escenarios; `rand` se puede inyectar para tests reproducibles.
+ * `multMin`/`multMax` es el rango del multiplicador de demanda del combo (caso base: 3x a 6x).
+ */
+export function monteCarlo(rand: () => number = Math.random, { multMin = 3, multMax = 6 }: MonteCarloOptions = {}): MonteCarloResult {
   const n_sim = 10000;
   const pvp_canasta = 35000, costo_canasta = 14000;
   const pvp_alta = 14000 + 2000 + 2000;
@@ -22,7 +27,7 @@ export function monteCarlo(rand: () => number = Math.random): MonteCarloResult {
     const pvpCombo = pvp_alta + pvpCanastaDesc;
     const costoCombo = costo_alta + (costo_canasta * noiseCost);
     
-    const mult = 3.0 + rand() * 3.0;
+    const mult = multMin + rand() * (multMax - multMin);
     const dCombo = Math.max(0, Math.round(1.3 * mult + (rand() + rand() - 1.0) * 2.0));
     const residualSola = Math.max(0, dSola - Math.round(dCombo * 0.15));
     
@@ -52,4 +57,25 @@ export function histogram(data: number[], numBins = 50): HistogramBin[] {
   }))
   for (const v of data) bins[Math.min(numBins - 1, Math.floor((v - min) / width))].count++
   return bins
+}
+
+export interface SensitivityRow { range: string; level: string; meanB: number; winRate: number; isBase: boolean }
+
+const SENSITIVITY_CASES = [
+  { range: '1x – 2x', level: 'Promoción débil', min: 1, max: 2 },
+  { range: '2x – 3x', level: 'Promoción moderada', min: 2, max: 3 },
+  { range: '3x – 6x (Caso Base)', level: 'Promoción activa (usada en informe)', min: 3, max: 6 },
+  { range: '6x – 9x', level: 'Promoción muy fuerte', min: 6, max: 9 },
+]
+
+/**
+ * Tabla de sensibilidad (Sección 14.2.2) calculada con el mismo modelo Monte Carlo.
+ * La fila "Caso Base" reutiliza `base` (la misma corrida que muestran los indicadores), así los números coinciden.
+ */
+export function sensitivityRows(base: MonteCarloResult, rand: () => number = Math.random): SensitivityRow[] {
+  return SENSITIVITY_CASES.map((c) => {
+    const isBase = c.min === 3 && c.max === 6
+    const r = isBase ? base : monteCarlo(rand, { multMin: c.min, multMax: c.max })
+    return { range: c.range, level: c.level, meanB: r.meanB, winRate: r.winRate, isBase }
+  })
 }

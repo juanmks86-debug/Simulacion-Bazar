@@ -33,3 +33,23 @@ describe('histogram', () => {
     expect(bins.reduce((a, b) => a + b.count, 0)).toBe(3)
   })
 })
+
+describe('sensibilidad (misma simulación)', () => {
+  it('la fila Caso Base reutiliza la corrida principal', async () => {
+    const { sensitivityRows } = await import('../src/sim/stats')
+    const base = monteCarlo(seeded(3))
+    const rows = sensitivityRows(base, seeded(11))
+    expect(rows).toHaveLength(4)
+    const b = rows.find((r) => r.isBase)!
+    expect(b.meanB).toBe(base.meanB)
+    expect(b.winRate).toBe(base.winRate)
+  })
+  it('más demanda implica más margen y más escenarios favorables', async () => {
+    const { sensitivityRows } = await import('../src/sim/stats')
+    const rows = sensitivityRows(monteCarlo(seeded(3)), seeded(11))
+    for (let i = 1; i < rows.length; i++) {
+      expect(rows[i].meanB).toBeGreaterThan(rows[i - 1].meanB)
+      expect(rows[i].winRate).toBeGreaterThanOrEqual(rows[i - 1].winRate - 0.5)
+    }
+  })
+})

@@ -15,9 +15,11 @@ import Sales from './sections/Sales'
 import Scenarios from './sections/Scenarios'
 import Academic from './sections/Academic'
 import Events from './sections/Events'
+import Datos from './sections/Datos'
 
 // Monte Carlo trae la librería de gráficos (Recharts): se descarga solo cuando se abre esa ruta
 const MonteCarlo = lazy(() => import('./sections/MonteCarlo'))
+const Informe = lazy(() => import('./sections/Informe'))
 
 // Qué muestra cada ruta. La simulación 3D y los controles viven en <Layout/> (siempre montados) y se muestran según la ruta.
 const PAGES: Record<string, ReactNode> = {
@@ -38,6 +40,8 @@ const PAGES: Record<string, ReactNode> = {
   '/escenarios': <Scenarios />,
   '/academico': <Academic />,
   '/eventos': <Events />,
+  '/datos': <Datos />,
+  '/informe': <Suspense fallback={<div className="card sub">Preparando informe…</div>}><Informe /></Suspense>,
 }
 
 export default function App() {

@@ -9,7 +9,7 @@ export default function Scenarios() {
     <div className="card" id="escenarios">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <h2>⇄ Comparador de Escenarios Comerciales</h2>
-        <button className="mini-btn btn-gold" id="saveScenario" onClick={() => controller.saveScenario()}>＋ Guardar Escenario Actual</button>
+        <button className="mini-btn btn-gold no-print" id="saveScenario" onClick={() => controller.saveScenario()}>＋ Guardar Escenario Actual</button>
       </div>
       <div className="sub" id="scenarioList" style={{ maxHeight: 170, overflowY: 'auto' }}>
         {list.length === 0 && 'Todavía no guardaste escenarios.'}

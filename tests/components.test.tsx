@@ -77,3 +77,93 @@ describe('estado de la simulación en pantalla', () => {
     expect(screen.getByText('$ 127.000')).toBeInTheDocument()
   })
 })
+
+import Datos from '../src/sections/Datos'
+import Informe from '../src/sections/Informe'
+import MonteCarlo from '../src/sections/MonteCarlo'
+import { clearData } from '../src/sim/dataStore'
+import { getParams } from '../src/sim/params'
+import { presentationStore, startPresentation, stopPresentation } from '../src/sim/presentation'
+import { money } from '../src/sim/calculator'
+
+describe('Monte Carlo: tabla consistente con los indicadores', () => {
+  it('la fila Caso Base muestra el mismo margen que “Media Combo Activo (B)”', () => {
+    render(<MonteCarlo />)
+    const headline = document.getElementById('mcMeanB')?.textContent
+    const baseRow = document.querySelector('#mcSensitivity tr[data-base="true"]')
+    expect(headline).toMatch(/^\$ /)
+    expect(baseRow).toHaveTextContent(headline as string)
+    expect(document.querySelectorAll('#mcSensitivity tbody tr')).toHaveLength(4)
+  })
+  it('al re-ejecutar siguen coincidiendo', () => {
+    render(<MonteCarlo />)
+    fireEvent.click(document.getElementById('btnRunMC') as HTMLElement)
+    const headline = document.getElementById('mcMeanB')?.textContent as string
+    expect(document.querySelector('#mcSensitivity tr[data-base="true"]')).toHaveTextContent(headline)
+  })
+})
+
+describe('Datos reales (CSV)', () => {
+  it('con el ejemplo sintético muestra resumen, Pack Mesa y reglas, y avisa que no son ventas reales', () => {
+    clearData()
+    render(<MemoryRouter><Datos /></MemoryRouter>)
+    expect(screen.getByText(/Todavía no cargaste datos/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Probar con ejemplo sintético/ }))
+    expect(document.getElementById('dTickets')).toHaveTextContent('220')
+    expect(screen.getByText(/DATOS DE EJEMPLO SINTÉTICOS/)).toBeInTheDocument()
+    expect(document.getElementById('dataPack')).toBeInTheDocument()
+    expect(document.querySelectorAll('#dataRules tbody tr').length).toBeGreaterThan(0)
+  })
+  it('calibrar cambia los parámetros de la simulación', () => {
+    clearData()
+    render(<MemoryRouter><Datos /></MemoryRouter>)
+    fireEvent.click(screen.getByRole('button', { name: /Probar con ejemplo sintético/ }))
+    const before = { ...getParams() }
+    fireEvent.click(document.getElementById('csvCalibrate') as HTMLElement)
+    expect(document.getElementById('csvCalibrated')).toHaveTextContent(/Listo/)
+    expect(getParams().sC).not.toBe(before.sC)
+  })
+  it('un archivo inválido muestra un error claro y no rompe', async () => {
+    clearData()
+    render(<MemoryRouter><Datos /></MemoryRouter>)
+    const input = document.getElementById('csvFile') as HTMLInputElement
+    const file = new File(['x,y\n1,2'], 'malo.csv', { type: 'text/csv' })
+    await act(async () => { fireEvent.change(input, { target: { files: [file] } }) })
+    expect(await screen.findByRole('alert')).toHaveTextContent(/columnas obligatorias/)
+  })
+})
+
+describe('Informe imprimible', () => {
+  it('reúne indicadores, Monte Carlo, reglas y margen, y el botón imprime', () => {
+    clearData()
+    const print = vi.fn()
+    window.print = print
+    render(<MemoryRouter><Informe /></MemoryRouter>)
+    expect(screen.getByRole('heading', { name: /Informe de resultados/ })).toBeInTheDocument()
+    expect(document.getElementById('mcSensitivity')).toBeInTheDocument()
+    expect(document.getElementById('calcPvpCombo')).toHaveTextContent(money(47750))
+    fireEvent.click(document.getElementById('printReport') as HTMLElement)
+    expect(print).toHaveBeenCalled()
+  })
+})
+
+describe('Modo presentación', () => {
+  it('recorre las secciones con las flechas y sale con Esc', () => {
+    clearData()
+    stopPresentation(); presentationStore.publish({ index: 0, notes: true })
+    render(<MemoryRouter initialEntries={['/']}><App /></MemoryRouter>)
+    act(() => startPresentation())
+    expect(document.getElementById('presCounter')).toHaveTextContent('1/10')
+    expect(document.getElementById('presTitle')).toHaveTextContent('Simulación 3D del bazar')
+    fireEvent.keyDown(window, { code: 'ArrowRight' })
+    expect(document.getElementById('presCounter')).toHaveTextContent('2/10')
+    expect(screen.getByRole('heading', { name: /Reglas de Asociación Apriori/ })).toBeInTheDocument()
+    fireEvent.keyDown(window, { code: 'ArrowLeft' })
+    expect(document.getElementById('presCounter')).toHaveTextContent('1/10')
+    fireEvent.keyDown(window, { code: 'KeyN' })
+    expect(document.getElementById('presNotes')).toBeNull()
+    fireEvent.keyDown(window, { code: 'Escape' })
+    expect(document.getElementById('presCounter')).toBeNull()
+    expect(document.body.classList.contains('presenting')).toBe(false)
+  })
+})

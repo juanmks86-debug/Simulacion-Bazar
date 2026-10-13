@@ -1,11 +1,13 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { histogram, monteCarlo } from '../sim/stats'
+import { histogram, monteCarlo, sensitivityRows } from '../sim/stats'
 import { money } from '../sim/calculator'
 
 // Evaluación financiera Monte Carlo (10.000 escenarios). El gráfico es responsivo (Recharts).
 export default function MonteCarlo() {
   const [r, setR] = useState(() => monteCarlo())
+  const rows = useMemo(() => sensitivityRows(r), [r])
+  const pct = (n: number) => n.toFixed(1).replace('.', ',') + '%'
   const bins = histogram(r.histDiff, 50)
   const data = bins.map((b) => ({ mid: b.mid, count: b.count, label: money(b.mid) }))
   const nearest = (v: number) => data.reduce((best, d) => (Math.abs(d.mid - v) < Math.abs(best.mid - v) ? d : best), data[0])
@@ -20,7 +22,7 @@ export default function MonteCarlo() {
           <h2>🎲 Evaluación Financiera Monte Carlo (10.000 Escenarios)</h2>
           <div className="sub">Distinguiendo descubrimiento (Apriori) de evaluación bajo incertidumbre económica (Monte Carlo).</div>
         </div>
-        <button className="btn btn-gold" id="btnRunMC" onClick={() => setR(monteCarlo())}>▶ Re-ejecutar 10.000 Escenarios</button>
+        <button className="btn btn-gold no-print" id="btnRunMC" onClick={() => setR(monteCarlo())}>▶ Re-ejecutar 10.000 Escenarios</button>
       </div>
       <div className="mc-stats">
         <div className="mc-kpi"><small>Media Canasta Sola (A)</small><b id="mcMeanA">{money(r.meanA)}</b></div>
@@ -43,100 +45,33 @@ export default function MonteCarlo() {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <div style={{ marginTop: "14px" }}>
-        <h3 style={{ color: "#fff", fontSize: "12px", marginBottom: "6px" }}>
+      <div style={{ marginTop: 14 }}>
+        <h3 style={{ color: '#fff', fontSize: 12, marginBottom: 6 }}>
           📊 Sensibilidad a los Supuestos del Modelo (Sección 14.2.2):
         </h3>
-        <table className="custom-table">
+        <table className="custom-table" id="mcSensitivity">
           <thead>
             <tr>
-              <th>
-                Multiplicador de Demanda
-              </th>
-              <th>
-                Nivel de Promoción
-              </th>
-              <th>
-                Margen Mensual Promedio
-              </th>
-              <th>
-                % Escenarios Favorables
-              </th>
+              <th>Multiplicador de Demanda</th>
+              <th>Nivel de Promoción</th>
+              <th>Margen Mensual Promedio</th>
+              <th>% Escenarios Favorables</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>
-                1x – 2x
-              </td>
-              <td>
-                Promoción débil
-              </td>
-              <td>
-                $ 87.639
-              </td>
-              <td>
-                <b>
-                  85,2%
-                </b>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                2x – 3x
-              </td>
-              <td>
-                Promoción moderada
-              </td>
-              <td>
-                $ 113.140
-              </td>
-              <td>
-                <b>
-                  95,9%
-                </b>
-              </td>
-            </tr>
-            <tr style={{ background: "#192c1f" }}>
-              <td>
-                <b>
-                  3x – 6x (Caso Base)
-                </b>
-              </td>
-              <td>
-                <b>
-                  Promoción activa (usada en informe)
-                </b>
-              </td>
-              <td>
-                <b>
-                  $ 164.564
-                </b>
-              </td>
-              <td>
-                <b style={{ color: "var(--gold)" }}>
-                  99,4%
-                </b>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                6x – 9x
-              </td>
-              <td>
-                Promoción muy fuerte
-              </td>
-              <td>
-                $ 242.832
-              </td>
-              <td>
-                <b>
-                  100,0%
-                </b>
-              </td>
-            </tr>
+            {rows.map((row) => (
+              <tr key={row.range} style={row.isBase ? { background: '#192c1f' } : undefined} data-base={row.isBase ? 'true' : undefined}>
+                <td>{row.isBase ? <b>{row.range}</b> : row.range}</td>
+                <td>{row.isBase ? <b>{row.level}</b> : row.level}</td>
+                <td>{row.isBase ? <b>{money(row.meanB)}</b> : money(row.meanB)}</td>
+                <td><b style={row.isBase ? { color: 'var(--gold)' } : undefined}>{pct(row.winRate)}</b></td>
+              </tr>
+            ))}
           </tbody>
         </table>
+        <div className="sub" style={{ marginTop: 6, fontSize: 11 }}>
+          Calculado con el mismo modelo de arriba: la fila “Caso Base” coincide con los indicadores. Los valores cambian levemente en cada ejecución.
+        </div>
       </div>
     </div>
   )
