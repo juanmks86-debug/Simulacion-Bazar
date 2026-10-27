@@ -52,7 +52,7 @@ export default function Bootstrap() {
           </b>
           {' '}
           <span style={{ fontSize: "10px", color: "var(--mu)", display: "block" }}>
-            {"Siempre > 1, pero oscila"}
+            {"Baja de 1 en 13 de 500 muestras"}
           </span>
         </div>
         <div className="mc-kpi">
@@ -64,13 +64,47 @@ export default function Bootstrap() {
             56,8%
             {' '}
             <span style={{ fontSize: "11px", color: "var(--mu)" }}>
-              (± 21,0%)
+              (± 20,9%)
             </span>
           </b>
           {' '}
           <span style={{ fontSize: "10px", color: "var(--mu)", display: "block" }}>
             Observado original: 57,1%
           </span>
+        </div>
+      </div>
+      <h3 style={{ color: "#fff", fontSize: "12px", margin: "16px 0 4px" }}>
+        🎲 Estabilidad frente a otras semillas del generador (Sección 10.1.3)
+      </h3>
+      <div className="sub">
+        Se repitió todo el pipeline (generación, limpieza, Apriori con min_support = 0,02 y filtro de combos 3+) con 200 semillas. El generador sortea los productos de forma independiente: cualquier combo es una coincidencia muestral.
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: "10px", marginTop: "10px" }}>
+        <div className="mc-kpi">
+          <small>Semillas con algún combo 3+</small>
+          {' '}
+          <b style={{ color: "var(--warning)" }}>78,5%</b>
+          {' '}
+          <span style={{ fontSize: "10px", color: "var(--mu)", display: "block" }}>Lift &gt; 1, alta rotación → estancado</span>
+        </div>
+        <div className="mc-kpi">
+          <small>Reaparece el combo exacto</small>
+          {' '}
+          <b style={{ color: "var(--danger)" }}>5,0%</b>
+          {' '}
+          <span style={{ fontSize: "10px", color: "var(--mu)", display: "block" }}>Platos + Servilletero + Tazas → Canasta</span>
+        </div>
+        <div className="mc-kpi">
+          <small>Mejor lift: mediana (P10 – P90)</small>
+          {' '}
+          <b>2,61 <span style={{ fontSize: "11px", color: "var(--mu)" }}>(1,95 – 3,48)</span></b>
+        </div>
+        <div className="mc-kpi">
+          <small>Lift de la semilla 42 (3,47)</small>
+          {' '}
+          <b style={{ color: "var(--gold)" }}>Percentil 89</b>
+          {' '}
+          <span style={{ fontSize: "10px", color: "var(--mu)", display: "block" }}>Alto, pero no excepcional frente al azar</span>
         </div>
       </div>
     </div>

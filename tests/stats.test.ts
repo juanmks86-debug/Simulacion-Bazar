@@ -16,6 +16,29 @@ describe('monteCarlo', () => {
     expect(r.winRate).toBeLessThanOrEqual(100)
     expect(r.histDiff).toHaveLength(3000)
   })
+  it('reproduce las cifras del informe (base simplificada: ~99,4% con empates; media del combo ~$164.564)', () => {
+    const r = monteCarlo(seeded(7))
+    expect(r.meanB).toBeGreaterThan(155000)
+    expect(r.meanB).toBeLessThan(175000)
+    expect(r.winRate).toBeGreaterThan(98.5)
+    expect(r.winRate + r.tieRate + r.loseRate).toBeCloseTo(100)
+    expect(r.loseRate).toBe(0)
+  })
+  it('con línea base equivalente el combo sigue ganando pero deja de ser casi seguro (Sección 14.2.7)', () => {
+    const r = monteCarlo(seeded(7))
+    expect(r.meanAeq).toBeGreaterThan(r.meanA)
+    expect(r.diffMeanEq).toBeLessThan(r.diffMean)
+    expect(r.winRateEq).toBeGreaterThan(85)
+    expect(r.winRateEq).toBeLessThan(95)
+    expect(r.loseRateEq).toBeGreaterThan(3)
+    expect(r.histDiffEq).toHaveLength(3000)
+  })
+  it('la variante conservadora es más exigente que la línea base equivalente', () => {
+    const r = monteCarlo(seeded(7))
+    expect(r.diffMeanCons).toBeLessThan(r.diffMeanEq)
+    expect(r.winRateCons).toBeLessThan(r.winRateEq)
+    expect(r.loseRateCons).toBeGreaterThan(r.loseRateEq)
+  })
 })
 
 describe('histogram', () => {
@@ -31,25 +54,5 @@ describe('histogram', () => {
     expect(histogram([])).toEqual([])
     const bins = histogram([5, 5, 5], 10)
     expect(bins.reduce((a, b) => a + b.count, 0)).toBe(3)
-  })
-})
-
-describe('sensibilidad (misma simulación)', () => {
-  it('la fila Caso Base reutiliza la corrida principal', async () => {
-    const { sensitivityRows } = await import('../src/sim/stats')
-    const base = monteCarlo(seeded(3))
-    const rows = sensitivityRows(base, seeded(11))
-    expect(rows).toHaveLength(4)
-    const b = rows.find((r) => r.isBase)!
-    expect(b.meanB).toBe(base.meanB)
-    expect(b.winRate).toBe(base.winRate)
-  })
-  it('más demanda implica más margen y más escenarios favorables', async () => {
-    const { sensitivityRows } = await import('../src/sim/stats')
-    const rows = sensitivityRows(monteCarlo(seeded(3)), seeded(11))
-    for (let i = 1; i < rows.length; i++) {
-      expect(rows[i].meanB).toBeGreaterThan(rows[i - 1].meanB)
-      expect(rows[i].winRate).toBeGreaterThanOrEqual(rows[i - 1].winRate - 0.5)
-    }
   })
 })

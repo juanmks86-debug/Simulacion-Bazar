@@ -19,13 +19,28 @@ export default function Callout() {
       <b>
         56,4% de los remuestreos
       </b>
-      . Por lo tanto, los resultados constituyen una
+      {' '}y, al repetir todo el análisis con
+      {' '}
+      <b>
+        200 semillas distintas del generador
+      </b>
+      , el combo exacto reaparece en solo el
+      {' '}
+      <b>
+        5,0%
+      </b>
+      {' '}de ellas (aunque en el 78,5% aparece algún combo de 3 o más productos). Como el generador sortea los productos de forma independiente y no incorpora asociaciones, el combo hallado es una
+      {' '}
+      <b>
+        coincidencia muestral
+      </b>
+      {' '}que ilustra el método. Por lo tanto, los resultados constituyen una
       {' '}
       <b>
         prueba de concepto metodológica
       </b>
       {' '}
-      e hipótesis comercial a validar con datos reales mediante un plan piloto.
+      e hipótesis comercial a validar con datos reales mediante un plan piloto; no demuestran comportamiento de clientes reales.
     </div>
   )
 }

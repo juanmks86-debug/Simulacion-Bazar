@@ -54,7 +54,7 @@ export default function Academic() {
             Entorno Verificado
           </span>
           <b>
-            Python 3.12 · pandas ≥ 2.0 · mlxtend ≥ 0.23
+            Python 3.12 · pandas ≥ 2.0 (probado 3.0.2) · mlxtend ≥ 0.23 (probado 0.25.0)
           </b>
         </div>
       </div>

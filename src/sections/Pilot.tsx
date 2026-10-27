@@ -39,7 +39,7 @@ export default function Pilot() {
             $ efectivo
           </b>
           <span className="sub">
-            Verificar margen 48,1%.
+            Margen real por encima del período de control (48,1% teórico).
           </span>
         </div>
         <div className="mc-kpi" style={{ textAlign: "left" }}>
@@ -50,7 +50,7 @@ export default function Pilot() {
             % Combo
           </b>
           <span className="sub">
-            Verificar demanda 3x-6x.
+            Demanda sobre el equilibrio (≈1,4x–1,7x); 3x–6x es solo el caso base.
           </span>
         </div>
       </div>
