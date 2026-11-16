@@ -643,3 +643,114 @@ body.presenting .wrap { padding-bottom: 150px; }
   .report-h { color: #111 !important; border-bottom: 2px solid #333; padding-bottom: 3px; margin-top: 14px; break-after: avoid; }
 }
 .report-h { font-size: 16px; margin: 18px 2px 8px; color: var(--gold); }
+
+/* --- Sidebar compacto: navegación agrupada --- */
+.side-menu {
+  background: linear-gradient(180deg, #0d2034 0%, #091626 100%);
+  border-right-color: #1d3c59;
+  padding: 17px 11px 12px;
+  gap: 6px;
+}
+.side-brand { border-bottom-color: #1c3b57; padding: 3px 7px 15px; }
+.side-logo {
+  background: linear-gradient(145deg, #20b8e8, #1263ad);
+  box-shadow: 0 5px 18px #087fc34a;
+}
+.side-brand strong { letter-spacing: .65px; font-size: 12px; }
+.side-brand span { color: #9bb5ca; font-size: 10px; }
+.side-brand .status-dot { margin-right: 5px; }
+.side-caption { color: #6f9fbd; font-size: 8.5px; padding: 7px 9px 3px; }
+.side-caption-spaced { margin-top: 7px; }
+.side-nav { gap: 4px; }
+.side-link, .side-group-trigger {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #d6e5f1;
+  background: transparent;
+  text-decoration: none;
+  font: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  transition: background .16s ease, border-color .16s ease, color .16s ease;
+}
+.side-link-icon { width: 20px; flex: 0 0 20px; text-align: center; font-size: 16px; color: #71c8ed; }
+.side-link-copy { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.side-link-copy b { font-size: 11.5px; }
+.side-link-copy small { color: #8da8bd; font-size: 9px; }
+.side-link:hover, .side-group-trigger:hover { background: #15314b; border-color: #285476; color: #fff; }
+.side-link.active, .side-group-trigger.active {
+  background: linear-gradient(90deg, #075b91, #123c61);
+  border-color: #167db7;
+  color: #fff;
+  box-shadow: 0 3px 14px #007ac52b;
+}
+.side-link.active .side-link-icon, .side-group-trigger.active .side-link-icon { color: #8be2ff; }
+.side-group { display: flex; flex-direction: column; gap: 2px; }
+.side-group-trigger { min-height: 38px; }
+.side-group-trigger b { flex: 1; font-size: 11.5px; }
+.side-chevron { color: #83a9c2; font-size: 16px; transition: transform .16s ease; }
+.side-chevron.expanded { transform: rotate(180deg); }
+.side-submenu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 1px 0 4px 19px;
+  padding-left: 9px;
+  border-left: 1px solid #28516f;
+}
+.side-sublink {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  color: #a9bfd0;
+  text-decoration: none;
+  font-size: 10.5px;
+  transition: background .15s ease, color .15s ease;
+}
+.side-sublink:hover { background: #132e46; color: #fff; }
+.side-sublink.active { background: #123d5c; color: #8de0ff; font-weight: 700; }
+.side-sub-icon { width: 15px; text-align: center; font-size: 12px; }
+.side-badge { background: #075d8c; color: #d8f5ff; }
+.side-ai-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 11px 12px;
+  margin: 5px 1px 0;
+  border: 1px solid #176c9b;
+  border-radius: 11px;
+  background: linear-gradient(145deg, #103b5c, #10243b);
+  color: #c5dceb;
+  text-decoration: none;
+  font-size: 10px;
+  line-height: 1.4;
+}
+.side-ai-card:hover { border-color: #35b9ec; background: linear-gradient(145deg, #124a70, #102c49); }
+.side-ai-title { color: #8ce4ff; font-size: 11px; font-weight: 800; }
+.side-ai-card b { color: #fff; font-size: 10px; }
+.side-footer { border-top-color: #1c3b57; color: #9bb5ca; padding: 9px 8px 4px; font-size: 9.5px; }
+.side-footer small { display: block; margin: 4px 0 0 13px; color: #6f8da5; font-size: 9px; }
+.side-footer .status-dot { background: #36d399; box-shadow: 0 0 0 3px #36d39925; }
+.side-collapse {
+  border: 1px solid #244a68;
+  border-radius: 8px;
+  background: #102941;
+  color: #a9c5d9;
+  padding: 7px;
+  font-size: 10px;
+  cursor: pointer;
+}
+.side-collapse:hover { background: #164366; color: #fff; }
+@media (max-width: 1050px) {
+  .side-menu { background: linear-gradient(180deg, #0d2034 0%, #091626 100%); }
+}
