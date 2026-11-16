@@ -13,6 +13,7 @@ export const ROUTES: RouteMeta[] = [
   { path: '/apriori-fp',   icon: '⚖',  label: 'Apriori vs. FP-Growth' },
   { path: '/sensibilidad', icon: '⚖',  label: 'Test de Sensibilidad' },
   { path: '/piloto',       icon: '🚀', label: 'Plan de Prueba Piloto' },
+  { path: '/decisiones',   icon: '🎯', label: 'Decisiones Comerciales', badge: 'F4' },
   { path: '/crisp',        icon: '🔄', label: 'Metodología CRISP-DM' },
   { path: '/productos',    icon: '▤',  label: 'Catálogo & Precios Reales' },
   { path: '/datos',        icon: '📁', label: 'Datos reales (CSV)' },

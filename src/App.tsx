@@ -9,6 +9,7 @@ import RulesApriori from './sections/RulesApriori'
 import AprioriVsFp from './sections/AprioriVsFp'
 import Sensitivity from './sections/Sensitivity'
 import Pilot from './sections/Pilot'
+import Decisions from './sections/Decisions'
 import Crisp from './sections/Crisp'
 import Catalog from './sections/Catalog'
 import Sales from './sections/Sales'
@@ -34,6 +35,7 @@ const PAGES: Record<string, ReactNode> = {
   '/apriori-fp': <AprioriVsFp />,
   '/sensibilidad': <Sensitivity />,
   '/piloto': <Pilot />,
+  '/decisiones': <Decisions />,
   '/crisp': <Crisp />,
   '/productos': <Catalog />,
   '/ventas': <Sales />,
