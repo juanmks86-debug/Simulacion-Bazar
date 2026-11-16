@@ -1,6 +1,7 @@
 import { P } from './catalog'
 import { dataStore } from './dataStore'
 import { apriori, evaluateRule, rulesFrom, type Rule } from './apriori'
+import { fpGrowth } from './fpGrowth'
 import { toBaskets } from './salesData'
 import { norm } from './csv'
 import { getParams } from './params'
@@ -19,7 +20,7 @@ export interface CustomerTraits {
 }
 export interface PlannedItem { k: string; buy: boolean; reason: string; probability: number; rule?: string }
 export interface BehaviorModel {
-  source: 'csv-apriori' | 'configured-prior'
+  source: 'csv-hybrid' | 'configured-prior'
   synthetic: boolean
   tickets: number
   comboConfidence: number | null
@@ -60,13 +61,20 @@ export function getBehaviorModel(): BehaviorModel {
 
   if (baskets.length >= 3) {
     const itemsets = apriori(baskets, Math.min(0.02, 1 / baskets.length), 4)
-    const rules = rulesFrom(itemsets, baskets.length, 0.05)
-      .filter((rule) => rule.antecedent.every((id) => Boolean(P[id])) && rule.consequent.every((id) => Boolean(P[id])))
-      .slice(0, 40)
+    const aprioriRules = rulesFrom(itemsets, baskets.length, 0.05)
+    const fpRules = rulesFrom(fpGrowth(baskets, Math.min(0.02, 1 / baskets.length), 4), baskets.length, 0.05)
+    const uniqueRules = new Map<string, Rule>()
+    for (const rule of [...aprioriRules, ...fpRules]) {
+      if (!rule.antecedent.every((id) => Boolean(P[id])) || !rule.consequent.every((id) => Boolean(P[id]))) continue
+      const key = `${rule.antecedent.join('+')}=>${rule.consequent.join('+')}`
+      const previous = uniqueRules.get(key)
+      if (!previous || rule.lift > previous.lift) uniqueRules.set(key, rule)
+    }
+    const rules = [...uniqueRules.values()].sort((a, b) => b.lift - a.lift || b.confidence - a.confidence).slice(0, 40)
     const step = evaluateRule(baskets, ['platos'], ['tazas', 'servilletero'])
     const pack = evaluateRule(baskets, ['platos', 'tazas', 'servilletero'], ['canasta'])
     cachedModel = {
-      source: 'csv-apriori',
+      source: 'csv-hybrid',
       synthetic: data.synthetic,
       tickets: baskets.length,
       comboConfidence: step.antecedentCount >= 3 ? step.confidence : null,
@@ -185,8 +193,8 @@ export function buildCustomerPlan(
 }
 
 export function describeBehaviorSource(model: BehaviorModel): string {
-  if (model.source !== 'csv-apriori') return 'Parámetros del simulador (sin CSV suficiente)'
+  if (model.source !== 'csv-hybrid') return 'Parámetros del simulador (sin CSV suficiente)'
   return model.synthetic
-    ? `Apriori sobre ${model.tickets} tickets sintéticos de ejemplo`
-    : `Apriori sobre ${model.tickets} tickets del CSV cargado`
+    ? `Apriori + FP-Growth sobre ${model.tickets} tickets sintéticos de ejemplo`
+    : `Apriori + FP-Growth sobre ${model.tickets} tickets del CSV cargado`
 }

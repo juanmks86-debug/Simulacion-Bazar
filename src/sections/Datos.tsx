@@ -153,7 +153,7 @@ export default function Datos() {
           </div>
           <RulesTable rules={analysis.rules} />
           <div className="sub" style={{ marginTop: 6, fontSize: 11 }}>
-            {analysis.itemsets} conjuntos frecuentes · {analysis.rules.length} reglas · ordenadas por lift (más de 1 = se compran juntos más de lo esperado por azar).
+            {analysis.itemsets.length} conjuntos frecuentes · {analysis.rules.length} reglas · ordenadas por lift (más de 1 = se compran juntos más de lo esperado por azar).
           </div>
         </div>
       )}

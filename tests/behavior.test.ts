@@ -43,7 +43,7 @@ describe('inteligencia híbrida de clientes', () => {
     rows.push('T4,Platos Londres', 'T4,Tazas de café', 'T4,Servilletero')
     expect(loadCsvText(rows.join('\n'), 'ventas.csv')).toBe(true)
     const model = getBehaviorModel()
-    expect(model.source).toBe('csv-apriori')
+    expect(model.source).toBe('csv-hybrid')
     expect(model.synthetic).toBe(false)
     expect(model.tickets).toBe(4)
     expect(model.comboConfidence).toBe(1)
