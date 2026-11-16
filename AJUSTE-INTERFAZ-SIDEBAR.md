@@ -27,3 +27,9 @@ Reducir la cantidad de opciones visibles en el sidebar sin eliminar ni modificar
 - ZIP de Fase 4 extraído y estructura revisada.
 - Se comprobó por inspección que las 20 rutas originales siguen representadas entre accesos directos y submenús.
 - No se pudo completar `npm ci` dentro del tiempo disponible; por eso no se certifican todavía `typecheck`, tests ni build. El `tsc` global también quedó bloqueado por la ausencia de dependencias del proyecto (`@types/node`, `vite/client` y `vitest/globals`).
+
+## Identidad visual unificada (ajuste posterior)
+- Se unificó la paleta de la interfaz general con el sidebar: azul petróleo `#0B1726`, superficies azul profundo `#14283D` / `#102238` y acento turquesa `#36B8A5` / `#43D4C0`.
+- Se actualizaron fondos, tarjetas, bordes, botones, estados activos, controles, tablas y elementos de navegación manteniendo la estructura y distribución de las vistas.
+- Se conservaron los colores semánticos de rotación alta/baja y estados de alerta para no confundir indicadores de negocio.
+- El lienzo de simulación conserva sus gráficos y lógica propios; sólo se ajustaron las superficies de interfaz que lo rodean.
