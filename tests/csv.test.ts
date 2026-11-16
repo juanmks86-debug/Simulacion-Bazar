@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { parseCsv, parseNumber } from '../src/sim/csv'
 import { parseSales, summarize, toBaskets } from '../src/sim/salesData'
+import { clearData, dataStore, loadCsvText } from '../src/sim/dataStore'
 
 describe('parseCsv', () => {
   it('detecta coma, punto y coma y tabulación', () => {
@@ -37,6 +38,11 @@ describe('parseSales', () => {
     expect(warnings.join(' ')).toMatch(/ignoraron 1 fila/)
     expect(warnings.join(' ')).toMatch(/cantidad/)
   })
+  it('advierte precios faltantes o inválidos por fila', () => {
+    const { warnings, sales } = parseSales('ticket,producto,precio\n1,Taza,1200\n2,Plato,abc')
+    expect(sales[1].price).toBeUndefined()
+    expect(warnings.join(' ')).toMatch(/1 fila.*sin precio válido/)
+  })
   it('falla con un mensaje claro si faltan las columnas obligatorias', () => {
     expect(() => parseSales('x,y\n1,2')).toThrow(/columnas obligatorias/)
     expect(() => parseSales('ticket,producto')).toThrow(/vacío/)
@@ -52,5 +58,30 @@ describe('canastas y resumen', () => {
     const s = summarize(sales)
     expect(s).toMatchObject({ tickets: 2, lines: 4, units: 5, products: 2, revenue: 450 })
     expect(s.top[0]).toMatchObject({ product: 'A', tickets: 2, units: 4 })
+  })
+  it('no presenta ingresos parciales como si fueran totales', () => {
+    const { sales } = parseSales('ticket,producto,precio\n1,Taza,1200\n2,Taza,\n3,Plato,3000')
+    const summary = summarize(sales)
+    expect(summary.revenue).toBeNull()
+    expect(summary.top.find((p) => p.product === 'Taza')?.revenue).toBeNull()
+    expect(summary.top.find((p) => p.product === 'Plato')?.revenue).toBe(3000)
+  })
+  it('un resumen vacío no produce NaN', () => {
+    expect(summarize([]).avgBasket).toBe(0)
+    expect(summarize([]).revenue).toBeNull()
+  })
+})
+
+
+describe('almacén de CSV', () => {
+  it('conserva el último archivo válido si el nuevo CSV no se puede leer', () => {
+    clearData()
+    expect(loadCsvText('ticket,producto\nA1,Taza', 'ventas-validas.csv')).toBe(true)
+    expect(loadCsvText('x,y\n1,2', 'archivo-invalido.csv')).toBe(false)
+    const state = dataStore.getSnapshot()
+    expect(state.fileName).toBe('ventas-validas.csv')
+    expect(state.sales).toHaveLength(1)
+    expect(state.error).toMatch(/se conservan los datos válidos.*ventas-validas.csv/i)
+    clearData()
   })
 })

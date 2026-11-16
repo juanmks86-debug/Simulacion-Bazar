@@ -3,11 +3,12 @@ import { LN, QX, QY, cam } from './constants';
 import { P, PROD, PROF, OUT, NAMES, KIDS, CAP, ST } from './catalog';
 import { pj } from './gfx';
 import { sim } from './state';
-import { fm, conv, basketConv, spd, rn, leaders, rush, hrs, fmt, actPromo } from './helpers';
+import { fm, spd, rn, leaders, rush, hrs, fmt, actPromo } from './helpers';
 import { addParticle, updateParticles, clearParticles } from './particles';
 import { audio } from './audioInstance';
 import { getParams } from './params';
-import { priceOf as pricePure } from './pricing';
+import { priceOf as pricePure, hasFullPack } from './pricing';
+import { createCustomerTraits, buildCustomerPlan, describeBehaviorSource } from './behavior';
 
 export function reset() {
   sim.cust = []; sim.queue = []; sim.serving = null; sim.emp = null; sim.empCd = 8; sim.uid = 0;
@@ -27,46 +28,28 @@ export function route(f, t) {
 }
 
 
-export function planFor(prof) {
-  const a = actPromo(), it = [], add = (k, b) => it.push({ k, buy: b !== false });
-  if (prof === 'apurado') add(rn(['platos', 'vasos', 'tazas', 'servilletero', 'cubiertos', 'mantel', 'vela']));
-  else if (prof === 'curioso') {
-    const ks = Object.keys(P).sort(() => Math.random() - 0.5).slice(0, 2 + Math.floor(Math.random() * 3));
-    ks.forEach(k => add(k, Math.random() < 0.35));
-  } else if (prof === 'ofertas') {
-    if (a) add(a.prod); else add(rn(['mantel', 'vela', 'adorno']), Math.random() < 0.5);
-    if (Math.random() < 0.5) add(rn(['canasta', 'retrato', 'cubiertos']), false);
-  } else {
-    if (Math.random() < 0.75) {
-      if (Math.random() < 0.65) {
-        add('platos');
-        if (Math.random() < conv()) {
-          add('tazas');
-          add('servilletero');
-          if (Math.random() < basketConv()) add('canasta');
-        } else if (Math.random() < 0.5) add('cubiertos');
-      } else {
-        add(rn(['vasos', 'cubiertos', 'tazas', 'servilletero']));
-      }
-    } else {
-      add(rn(['mantel', 'vela', 'retrato', 'adorno', 'canasta']));
-    }
-    if (a && Math.random() < 0.35 && !it.some(i => i.k === a.prod)) add(a.prod);
-    if (Math.random() < 0.12) it[it.length - 1].buy = false;
-  }
-  return it}
+export function planFor(prof, traits = createCustomerTraits(prof)) {
+  return buildCustomerPlan(prof, traits).items;
+}
 
 export function spawn() {
   if (leaders().length >= 8) return;
   sim.S2.visits = (sim.S2.visits || 0) + 1;
   const prof = rn(['normal', 'normal', 'normal', 'normal', 'apurado', 'curioso', 'ofertas']);
+  const traits = createCustomerTraits(prof);
+  const plan = buildCustomerPlan(prof, traits);
   const nm = NAMES[sim.nameI % NAMES.length], o = Object.assign({}, OUT[sim.nameI % OUT.length]);
   sim.nameI++;
   const c = {
     id: ++sim.uid, name: nm, prof, o, role: 'lead', k: 1, x: 3.1, y: 14.9,
-    items: planFor(prof), i: 0, cart: [], keys: [], dots: [], tot: 0, totCost: 0,
-    st: 'walk', t: 0, ph: 0, vx: 0, vy: -1, walk: false, pat: PROF[prof].pat,
-    chatT: 0, chatted: false, paid: false, promoUsed: false, isCombo: false, spf: PROF[prof].sp
+    items: plan.items, i: 0, cart: [], keys: [], dots: [], tot: 0, totCost: 0,
+    st: 'walk', t: 0, ph: 0, vx: 0, vy: -1, walk: false, pat: traits.patience,
+    chatT: 0, chatted: false, paid: false, promoUsed: false, isCombo: false, spf: PROF[prof].sp,
+    budget: traits.budget, initialBudget: traits.budget, remainingBudget: traits.budget,
+    priceSensitivity: traits.priceSensitivity, promoAffinity: traits.promoAffinity,
+    curiosity: traits.curiosity, preferences: traits.preferences, impulseRate: traits.impulseRate,
+    decisionHistory: [], purchaseHistory: [], modelSource: describeBehaviorSource(plan.model),
+    behaviorConfidence: { combo: plan.model.comboConfidence, basket: plan.model.basketConfidence }
   };
   c.path = route(c, P[c.items[0].k]);
   sim.cust.push(c);
@@ -110,16 +93,40 @@ export function priceOf(c, k) {
 
 export function takeItem(c, it) {
   const p = P[it.k];
-  if (!it.buy) { add(c.name + ' miró ' + p.n + ' y lo dejó', '—'); return; }
-  if (ST[it.k] <= 0) { add(c.name + ' no encontró ' + p.n + ' (agotado)', '—'); return; }
-  
+  if (!p) return;
+  if (!it.buy) {
+    const decision = { product: it.k, bought: false, reason: 'Decidió no comprar: ' + (it.reason || 'preferencia personal') };
+    c.decisionHistory.push(decision);
+    add(c.name + ' miró ' + p.n + ' y lo dejó', '—');
+    return;
+  }
+  if (ST[it.k] <= 0) {
+    c.decisionHistory.push({ product: it.k, bought: false, reason: 'No compró: producto agotado' });
+    add(c.name + ' no encontró ' + p.n + ' (agotado)', '—');
+    return;
+  }
+
   const pr = priceOf(c, it.k);
+  if (pr.price > c.remainingBudget) {
+    c.decisionHistory.push({ product: it.k, bought: false, reason: 'No compró: supera su presupuesto disponible' });
+    add(c.name + ' descartó ' + p.n + ' (presupuesto insuficiente)', '—');
+    return;
+  }
+  const pricePressure = pr.price / Math.max(1, c.initialBudget || c.budget || 1);
+  const promotionRelief = (pr.promo || pr.disc) ? (c.promoAffinity || 0) * 0.35 : 0;
+  const rejectionChance = Math.max(0, Math.min(0.65, pricePressure * (c.priceSensitivity || 0.4) * 0.5 - promotionRelief));
+  if (Math.random() < rejectionChance) {
+    c.decisionHistory.push({ product: it.k, bought: false, reason: 'Rechazó el precio según su sensibilidad y presupuesto' });
+    add(c.name + ' comparó ' + p.n + ' y decidió no comprarlo', '—');
+    return;
+  }
   ST[it.k] -= pr.q;
-  
+
   const itemCost = p.costo * pr.q;
   c.totCost = (c.totCost || 0) + itemCost;
   c.tot += pr.price;
-  
+  c.remainingBudget = Math.max(0, c.remainingBudget - pr.price);
+
   for (let q = 0; q < pr.q; q++) {
     c.cart.push(p.e);
     c.keys.push(it.k);
@@ -127,11 +134,13 @@ export function takeItem(c, it) {
   }
   if (pr.promo) c.promoUsed = true;
   if (pr.disc) {
-    sim.S2.can++;
+    c.packDiscount = true;
     const pt = pj(c.x, c.y, 0);
     addParticle('🧺 PACK MESA (-15%)', pt[0], pt[1] - 80 * cam.zoom, '#ffd54f');
   }
-  
+
+  c.purchaseHistory.push({ product: it.k, name: p.n, quantity: pr.q, paid: pr.price, reason: it.reason || 'Compra por preferencia', rule: it.rule || null });
+  c.decisionHistory.push({ product: it.k, bought: true, reason: it.reason || 'Compra planificada' });
   add(c.name + ' tomó ' + (pr.q > 1 ? '2× ' : '') + p.n + (pr.label ? ' (' + pr.label + ')' : ''), fm(pr.price));
   audio.sfx.pick();
 }
@@ -260,9 +269,8 @@ export function upd(dt) {
         sim.S2.margin += realMargin;
         
         c.keys.forEach(k => sim.S2.byUnits[k] = (sim.S2.byUnits[k] || 0) + 1);
-        if (['platos', 'tazas', 'servilletero'].every(z => c.keys.includes(z))) {
-          sim.S2.combo++;
-        }
+        if (hasFullPack(c.keys)) sim.S2.combo++;
+        if (c.packDiscount) sim.S2.can++;
         if (c.promoUsed) sim.S2.promo++;
         c.paid = true;
         audio.sfx.cash();

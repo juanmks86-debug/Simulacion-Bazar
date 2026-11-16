@@ -28,6 +28,7 @@ export function parseSales(text: string): ParseResult {
   const sales: Sale[] = []
   const names = new Map<string, string>() // nombre normalizado -> primer nombre visto
   let skipped = 0
+  let missingPrices = 0
   for (const r of rows.slice(1)) {
     const ticket = (r[iT] ?? '').trim(), rawProduct = (r[iP] ?? '').replace(/\s+/g, ' ').trim()
     const qty = iQ >= 0 ? parseNumber(r[iQ] ?? '') : 1
@@ -35,6 +36,7 @@ export function parseSales(text: string): ParseResult {
     const k = norm(rawProduct)
     if (!names.has(k)) names.set(k, rawProduct)
     const price = iPr >= 0 ? parseNumber(r[iPr] ?? '') : NaN
+    if (iPr >= 0 && !Number.isFinite(price)) missingPrices++
     sales.push({
       ticket, product: names.get(k) as string, qty,
       price: Number.isFinite(price) ? price : undefined,
@@ -46,6 +48,7 @@ export function parseSales(text: string): ParseResult {
   if (skipped) warnings.push(`Se ignoraron ${skipped} fila(s) sin ticket, sin producto o con cantidad inválida.`)
   if (iQ < 0) warnings.push('No hay columna de cantidad: se asumió 1 unidad por fila.')
   if (iPr < 0) warnings.push('No hay columna de precio: no se calculan ingresos.')
+  else if (missingPrices) warnings.push(`Hay ${missingPrices} fila(s) sin precio válido: los ingresos se mostrarán como incompletos.`)
   return { sales, warnings }
 }
 
@@ -68,25 +71,26 @@ export interface SalesSummary {
 
 export function summarize(sales: Sale[]): SalesSummary {
   const baskets = toBaskets(sales)
-  const byProduct = new Map<string, { tickets: Set<string>; units: number; revenue: number; hasPrice: boolean }>()
-  let units = 0, revenue = 0, anyPrice = false
+  const byProduct = new Map<string, { tickets: Set<string>; units: number; revenue: number; hasMissingPrice: boolean }>()
+  let units = 0, revenue = 0, anyPrice = false, anyMissingPrice = false
   const dates: string[] = []
   for (const s of sales) {
     units += s.qty
-    const e = byProduct.get(s.product) ?? { tickets: new Set<string>(), units: 0, revenue: 0, hasPrice: false }
+    const e = byProduct.get(s.product) ?? { tickets: new Set<string>(), units: 0, revenue: 0, hasMissingPrice: false }
     e.tickets.add(s.ticket); e.units += s.qty
-    if (s.price !== undefined) { e.revenue += s.price * s.qty; e.hasPrice = true; revenue += s.price * s.qty; anyPrice = true }
+    if (s.price !== undefined && Number.isFinite(s.price)) { e.revenue += s.price * s.qty; revenue += s.price * s.qty; anyPrice = true }
+    else { e.hasMissingPrice = true; anyMissingPrice = true }
     byProduct.set(s.product, e)
     if (s.date) dates.push(s.date)
   }
   dates.sort()
   return {
     tickets: baskets.length, lines: sales.length, units, products: byProduct.size,
-    revenue: anyPrice ? revenue : null,
-    avgBasket: baskets.reduce((a, b) => a + b.length, 0) / baskets.length,
+    revenue: anyPrice && !anyMissingPrice ? revenue : null,
+    avgBasket: baskets.length ? baskets.reduce((a, b) => a + b.length, 0) / baskets.length : 0,
     from: dates[0], to: dates[dates.length - 1],
     top: [...byProduct.entries()]
-      .map(([product, e]) => ({ product, tickets: e.tickets.size, units: e.units, revenue: e.hasPrice ? e.revenue : null }))
+      .map(([product, e]) => ({ product, tickets: e.tickets.size, units: e.units, revenue: e.tickets.size > 0 && !e.hasMissingPrice ? e.revenue : null }))
       .sort((a, b) => b.tickets - a.tickets || b.units - a.units)
       .slice(0, 10),
   }

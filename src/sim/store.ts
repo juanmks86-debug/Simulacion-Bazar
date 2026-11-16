@@ -1,7 +1,9 @@
 import { createStore } from './createStore'
 
 export interface Kpi { revenue: string; margin: string; sales: number; combo: number; basket: number; conversion: string; marginPct: string }
-export interface ClientRow { id: number; name: string; icon: string; fam: string; profile: string; color: string; status: string; cart: string; total: string }
+export interface ClientPurchase { name: string; quantity: number; paid: number; reason: string; rule?: string | null }
+export interface ClientDecision { product: string; bought: boolean; reason: string }
+export interface ClientRow { id: number; name: string; icon: string; fam: string; profile: string; color: string; status: string; cart: string; total: string; initialBudget: number; remainingBudget: number; preferences: string[]; purchaseHistory: ClientPurchase[]; decisionHistory: ClientDecision[]; modelSource: string; priceSensitivity: number; promoAffinity: number; curiosity: number; comboConfidence: number | null; basketConfidence: number | null }
 export interface LogRow { t: string; m: string; v: string }
 export interface Scenario { promo: string; comboProb: number; basketProb: number; visits: number; sales: number; revenue: number; margin: number; combos: number }
 export interface Inspector { title: string; badge: string; high: boolean; pvp: string; costo: string; stock: number; cap: number; rol: string }

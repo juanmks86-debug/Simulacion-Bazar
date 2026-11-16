@@ -344,6 +344,41 @@ input[type=range] {
 .cl-name { font-weight: 700; color: #fff; }
 .cl-sub { color: var(--mu); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cl-total { font-weight: 750; color: var(--gold); font-size: 12px; white-space: nowrap; }
+.client-select {
+  width: 100%;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #1f3023;
+  font: inherit;
+  cursor: pointer;
+}
+.client-select:hover, .client-select.selected { background: rgba(212, 158, 40, .08); }
+.client-select:focus-visible { outline: 1px solid var(--gold); outline-offset: -1px; border-radius: 5px; }
+.client-detail {
+  margin: 9px 4px 4px;
+  padding: 10px;
+  border: 1px solid #354936;
+  border-radius: 8px;
+  background: rgba(20, 35, 25, .72);
+  font-size: 11px;
+}
+.client-detail-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; color: #fff; margin-bottom: 9px; }
+.client-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.client-detail-grid > div { display: flex; flex-direction: column; gap: 2px; padding: 6px; border-radius: 5px; background: rgba(255,255,255,.035); }
+.client-detail-grid small, .client-history small { color: var(--mu); font-size: 10px; }
+.client-detail-grid b { color: var(--gold); }
+.client-detail-line { margin-top: 7px; color: #d8dfd3; line-height: 1.5; }
+.client-detail-line small { color: var(--mu); }
+.client-detail-subtitle { margin: 10px 0 5px; color: var(--gold); font-weight: 700; }
+.client-history { list-style: none; padding: 0; margin: 0; }
+.client-history li { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 5px 0; border-top: 1px solid rgba(255,255,255,.06); }
+.client-history li span { min-width: 0; }
+.client-history li small { display: block; margin-top: 2px; line-height: 1.35; }
+.client-history li b { color: var(--gold); white-space: nowrap; font-size: 10px; }
+.client-history.decisions li b { color: #a8c7a8; }
+
 
 .bottom-sections {
   display: grid;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { PR, PROD, P } from '../src/sim/catalog'
-import { hasCombo, priceOf } from '../src/sim/pricing'
+import { hasCombo, hasFullPack, priceOf } from '../src/sim/pricing'
 
 const full = () => Object.fromEntries(PROD.map((p) => [p.id, 5]))
 
@@ -24,7 +24,7 @@ describe('priceOf', () => {
     expect(priceOf('tazas', [], PR.tazas, full())).toMatchObject({ price: P.tazas.p, q: 2, label: '2x1', promo: true })
   })
   it('2x1 sin stock suficiente: se vende una sola unidad', () => {
-    expect(priceOf('tazas', [], PR.tazas, { ...full(), tazas: 1 })).toMatchObject({ q: 1, label: '', promo: true })
+    expect(priceOf('tazas', [], PR.tazas, { ...full(), tazas: 1 })).toMatchObject({ q: 1, label: '', promo: false })
   })
   it('promociones porcentuales', () => {
     expect(priceOf('mantel', [], PR.mantel, full()).price).toBeCloseTo(50000 * 0.8)
@@ -37,6 +37,8 @@ describe('priceOf', () => {
     const combo = ['platos', 'tazas', 'servilletero']
     expect(hasCombo(combo)).toBe(true)
     expect(hasCombo(['platos', 'tazas'])).toBe(false)
+    expect(hasFullPack([...combo, 'canasta'])).toBe(true)
+    expect(hasFullPack(combo)).toBe(false)
     expect(priceOf('canasta', combo, null, full())).toMatchObject({ price: 35000 * 0.85, disc: true, label: '15% Pack Mesa' })
     expect(priceOf('canasta', ['platos'], null, full())).toMatchObject({ price: 35000, disc: false })
   })

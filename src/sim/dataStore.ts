@@ -13,10 +13,18 @@ export function loadCsvText(text: string, fileName: string, synthetic = false): 
   try {
     const { sales, warnings } = parseSales(text)
     dataStore.publish({ fileName, sales, warnings, error: null, synthetic })
-    try { if (text.length <= MAX_SAVED) localStorage.setItem(KEY, JSON.stringify({ text, fileName, synthetic })) } catch { /* sin espacio */ }
+    try {
+      if (text.length <= MAX_SAVED) localStorage.setItem(KEY, JSON.stringify({ text, fileName, synthetic }))
+      else localStorage.removeItem(KEY) // No restaurar un CSV anterior como si fuera el último cargado.
+    } catch {
+      // Si no se puede persistir el archivo nuevo, eliminar cualquier copia vieja para evitar restaurarla por error.
+      try { localStorage.removeItem(KEY) } catch { /* sin almacenamiento disponible */ }
+    }
     return true
   } catch (e) {
-    dataStore.publish({ error: e instanceof Error ? e.message : 'No se pudo leer el archivo.' })
+    const reason = e instanceof Error ? e.message : 'No se pudo leer el archivo.'
+    const activeFile = dataStore.getSnapshot().fileName
+    dataStore.publish({ error: activeFile ? `${reason} Se conservan los datos válidos del archivo «${activeFile}».` : reason })
     return false
   }
 }
@@ -29,8 +37,14 @@ export function clearData() {
 /** Recupera el último CSV guardado (al abrir la página). */
 export function restoreData() {
   try {
-    const saved = JSON.parse(localStorage.getItem(KEY) || 'null')
-    if (saved?.text) loadCsvText(saved.text, saved.fileName ?? 'datos.csv', !!saved.synthetic)
-  } catch { /* noop */ }
+    const raw = localStorage.getItem(KEY)
+    if (!raw) return
+    const saved = JSON.parse(raw)
+    if (typeof saved?.text !== 'string' || !saved.text || !loadCsvText(saved.text, saved.fileName ?? 'datos.csv', !!saved.synthetic)) {
+      localStorage.removeItem(KEY)
+    }
+  } catch {
+    try { localStorage.removeItem(KEY) } catch { /* noop */ }
+  }
 }
 restoreData()

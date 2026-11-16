@@ -1,5 +1,5 @@
 import { cam } from './constants';
-import { PROD, PROF, ST, CAP } from './catalog';
+import { P, PROD, PROF, ST, CAP } from './catalog';
 import { pj } from './gfx';
 import { sim } from './state';
 import { fm, leaders, hrs, fmt, period, rush, actPromo } from './helpers';
@@ -35,7 +35,17 @@ function ui() {
     kpi: { revenue: fm(sim.S2.inc), margin: fm(sim.S2.margin || 0), sales: sim.S2.n, combo: sim.S2.combo, basket: sim.S2.can, conversion: convRate, marginPct },
     clients: leaders().slice(0, 7).map(c => {
       const st = stTxt(c);
-      return { id: c.id, name: c.name, icon: PROF[c.prof].ic, fam: c.fam || '', profile: PROF[c.prof].nm, color: st[1], status: st[0], cart: c.cart.join(''), total: c.tot ? fm(c.tot) : '—' };
+      return {
+        id: c.id, name: c.name, icon: PROF[c.prof].ic, fam: c.fam || '', profile: PROF[c.prof].nm,
+        color: st[1], status: st[0], cart: c.cart.join(''), total: c.tot ? fm(c.tot) : '—',
+        initialBudget: c.initialBudget || c.budget || 0, remainingBudget: c.remainingBudget || 0,
+        preferences: (c.preferences || []).map(k => P[k]?.n || k),
+        purchaseHistory: c.purchaseHistory || [],
+        decisionHistory: (c.decisionHistory || []).map(d => ({ ...d, product: P[d.product]?.n || d.product })),
+        modelSource: c.modelSource || 'Modelo base',
+        priceSensitivity: c.priceSensitivity || 0, promoAffinity: c.promoAffinity || 0, curiosity: c.curiosity || 0,
+        comboConfidence: c.behaviorConfidence?.combo ?? null, basketConfidence: c.behaviorConfidence?.basket ?? null
+      };
     }),
     log: sim.LOG.slice(0, 16),
     units: { ...(sim.S2.byUnits || {}) }
