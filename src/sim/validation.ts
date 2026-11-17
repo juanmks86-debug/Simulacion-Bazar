@@ -38,9 +38,9 @@ export function bootstrapRule(baskets: string[][], antecedent: string[], consequ
   return { iterations, appearances, appearanceRate: appearances / iterations, confidenceMean: mean(confidences), liftMean: mean(lifts), confidenceP05: quantile(confidences, .05), confidenceP95: quantile(confidences, .95), liftP05: quantile(lifts, .05), liftP95: quantile(lifts, .95), values: confidences.length }
 }
 
-export function sensitivityAnalysis(baskets: string[][], thresholds = [0.01, 0.015, 0.02, 0.03, 0.05], minConfidence = 0.2) {
+export function sensitivityAnalysis(baskets: string[][], thresholds = [0.01, 0.015, 0.02, 0.03, 0.05], minConfidence = 0.2, maxSize = 4) {
   return thresholds.map((threshold) => {
-    const itemsets = apriori(baskets, threshold, 4)
+    const itemsets = apriori(baskets, threshold, maxSize)
     const rules = rulesFrom(itemsets, baskets.length, minConfidence)
     return { threshold, minCount: baskets.length ? Math.max(1, Math.ceil(threshold * baskets.length - 1e-9)) : 0, itemsets: itemsets.length, rules: rules.length, combos: itemsets.filter((x) => x.items.length >= 3).length }
   })

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useAnalysis } from '../hooks/useAnalysis'
 import { buildCommercialOpportunities } from '../sim/commercial'
 import { money } from '../sim/calculator'
+import { useDynamicCatalog } from '../hooks/useDynamicCatalog'
 
 const pct = (n: number) => `${(n * 100).toFixed(1).replace('.', ',')}%`
 
@@ -19,9 +20,10 @@ export default function Decisions() {
   const [targetMargin, setTargetMargin] = useState(35)
   const [discountCap, setDiscountCap] = useState(15)
   const { data, analysis } = useAnalysis(0.01, 0.2)
+  const { products } = useDynamicCatalog()
   const opportunities = useMemo(
-    () => buildCommercialOpportunities(analysis?.rules ?? [], targetMargin / 100, discountCap / 100),
-    [analysis?.rules, targetMargin, discountCap],
+    () => buildCommercialOpportunities(analysis?.rules ?? [], targetMargin / 100, discountCap / 100, products, analysis?.baskets ?? []),
+    [analysis?.rules, analysis?.baskets, products, targetMargin, discountCap],
   )
 
   return (
@@ -49,13 +51,13 @@ export default function Decisions() {
       </div>
 
       {!analysis && <div className="sub" style={{ marginTop: 14 }}>Cargá un archivo en <b>Datos reales (CSV)</b> o utilizá el ejemplo sintético para descubrir oportunidades.</div>}
-      {analysis && !opportunities.length && <div className="sub" style={{ marginTop: 14 }}>No se encontraron reglas de tres o más productos que incluyan artículos estancados y puedan asociarse al catálogo. Probá reducir soporte/confianza en la sección de datos o revisar los nombres de productos del CSV.</div>}
+      {analysis && !opportunities.length && <div className="sub" style={{ marginTop: 14 }}>No hay productos con precios válidos suficientes para evaluar oportunidades económicas. Revisá la columna precio del CSV.</div>}
 
       <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
         {opportunities.map((o, index) => (
           <article key={o.products.map((p) => p.id).sort().join('-')} style={{ border: '1px solid var(--bd)', borderRadius: 10, padding: 12, background: 'var(--card-alt)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-              <div><b style={{ color: 'var(--gold)' }}>#{index + 1} · {o.products.map((p) => `${p.e} ${p.n}`).join(' + ')}</b><div className="sub">{o.count} tickets · soporte {pct(o.support)} · confianza {pct(o.confidence)} · lift {o.lift.toFixed(2).replace('.', ',')}×</div></div>
+              <div><b style={{ color: 'var(--gold)' }}>#{index + 1} · {o.products.map((p) => `${p.e} ${p.n}`).join(' + ')}</b><div className="sub">{o.source === 'association' ? 'Regla de asociación observada' : o.source === 'cooccurrence' ? 'Coaparición observada (exploratoria)' : 'Evaluación económica individual (sin asociación)'} · {o.count} tickets · soporte {pct(o.support)} · confianza {pct(o.confidence)} · lift {o.lift.toFixed(2).replace('.', ',')}×</div></div>
               <div style={{ textAlign: 'right' }}><small className="sub">Precio regular conjunto</small><div><b>{money(o.revenue)}</b></div></div>
             </div>
             <div className="mc-stats" style={{ marginTop: 10 }}>
@@ -64,7 +66,7 @@ export default function Decisions() {
               <div className="mc-kpi"><small>Máximo descuento seguro</small><b>{pct(o.maxSafeDiscount)}</b></div>
               <div className="mc-kpi"><small>Propuesta / margen final</small><b>{pct(o.suggestedDiscount)} / {pct(o.marginAtSuggestion)}</b></div>
             </div>
-            <div className="sub" style={{ marginTop: 8 }}>{o.targetMarginFeasible ? 'El descuento propuesto respeta el margen objetivo configurado.' : 'El margen objetivo no es alcanzable ni siquiera sin descuento: habría que revisar precio o costo.'} Evaluación basada en precios y costos del catálogo; no implica que la promoción vaya a aumentar las ventas.</div>
+            <div className="sub" style={{ marginTop: 8 }}>{o.targetMarginFeasible ? 'El descuento propuesto respeta el margen objetivo configurado.' : 'El margen objetivo no es alcanzable ni siquiera sin descuento: habría que revisar precio o costo.'} Evaluación basada en precios y costos del CSV; no implica que la promoción vaya a aumentar las ventas.</div>
           </article>
         ))}
       </div>

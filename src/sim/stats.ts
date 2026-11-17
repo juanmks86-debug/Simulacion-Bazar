@@ -1,4 +1,5 @@
 /* Estadística pura (sin DOM): Evaluación financiera Monte Carlo, 10.000 escenarios. */
+import type { Product } from './catalog'
 export interface MonteCarloResult {
   // Base simplificada (Sección 14.2): combo activo (4 productos) contra canasta vendida sola
   meanA: number; meanB: number; diffMean: number; winRate: number; tieRate: number; loseRate: number; histDiff: number[]
@@ -31,11 +32,15 @@ const normal = (mean: number, sd: number, rand: () => number): number => {
  * ruido de costos N(1; 0,05) en la canasta y N(1; 0,03) en el trío de alta rotación.
  * `rand` se puede inyectar para tests reproducibles. Los resultados varían unos puntos entre corridas (no usa semilla fija).
  */
-export function monteCarlo(rand: () => number = Math.random): MonteCarloResult {
+export function monteCarlo(rand: () => number = Math.random, products?: Product[]): MonteCarloResult {
   const n_sim = 10000;
-  const pvp_canasta = 35000, costo_canasta = 14000;
-  const pvp_alta = 14000 + 2000 + 2000;
-  const costo_alta = 8400 + 1200 + 1200;
+  const valid = (products ?? []).filter((p) => Number.isFinite(p.p) && p.p > 0 && Number.isFinite(p.costo));
+  const ranked = [...valid].sort((a, b) => (b.tickets ?? 0) - (a.tickets ?? 0) || (b.units ?? 0) - (a.units ?? 0));
+  const chosen = ranked.slice(0, Math.min(2, ranked.length));
+  const pvp_canasta = chosen.length ? chosen[0].p : 35000;
+  const costo_canasta = chosen.length ? chosen[0].costo : 14000;
+  const pvp_alta = chosen.length > 1 ? chosen[1].p : 0;
+  const costo_alta = chosen.length > 1 ? chosen[1].costo : 0;
 
   let totalA = 0, totalB = 0, totalAeq = 0, totalAcons = 0, totalBcons = 0;
   let win = 0, tie = 0, lose = 0, winEq = 0, loseEq = 0, winCons = 0, loseCons = 0;

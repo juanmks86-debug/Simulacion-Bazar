@@ -24,14 +24,33 @@ describe('commercial decision engine', () => {
     expect(result.suggestedDiscount).toBe(0)
   })
 
-  it('does not recommend rules without an inactive product or with unknown catalog items', () => {
+  it('ignores unknown products but does not require a preassigned stagnant rotation', () => {
     const highRotation: Rule = { ...rule, consequent: ['Servilletero'] }
     const unknown: Rule = { ...rule, consequent: ['Producto desconocido'] }
-    expect(buildCommercialOpportunities([highRotation, unknown])).toHaveLength(0)
+    expect(buildCommercialOpportunities([highRotation])).toHaveLength(1)
+    expect(buildCommercialOpportunities([unknown])).toHaveLength(0)
   })
 
   it('deduplicates equivalent item combinations', () => {
     const reverse: Rule = { ...rule, antecedent: ['Canasta de mimbre', 'Tazas de café'], consequent: ['Platos Londres'] }
     expect(buildCommercialOpportunities([rule, reverse])).toHaveLength(1)
+  })
+})
+
+
+describe('fallback de oportunidades para catálogos nuevos', () => {
+  const products = ['Producto A', 'Producto B'].map((n, i) => ({
+    id: `producto-${i}`, n, e: '📦', p: 1000 + i * 500, costo: (1000 + i * 500) * 0.55,
+    rot: 'Alta' as const, x: 0, y: 0, s: 0, t: i, k: 'generic', c: '#aaa', rol: 'CSV', tickets: 1, units: 1,
+  }))
+  it('ofrece pares que coaparecen cuando no hay reglas Apriori suficientes', () => {
+    const results = buildCommercialOpportunities([], 0.35, 0.15, products, [['Producto A', 'Producto B']])
+    expect(results.length).toBeGreaterThan(0)
+    expect(results[0].source).toBe('cooccurrence')
+  })
+  it('ofrece evaluación individual si el CSV solo contiene un producto', () => {
+    const results = buildCommercialOpportunities([], 0.35, 0.15, products.slice(0, 1), [['Producto A']])
+    expect(results).toHaveLength(1)
+    expect(results[0].source).toBe('individual')
   })
 })

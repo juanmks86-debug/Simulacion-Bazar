@@ -2,6 +2,7 @@
 export interface Product {
   id: string; n: string; e: string; p: number; costo: number; rot: 'Alta' | 'Estancado'
   x: number; y: number; s: number; t: number; k: string; c: string; rol: string
+  tickets?: number; units?: number; sourcePrice?: 'csv' | 'missing'
 }
 export interface Promo { txt: string; lab: string; prod: string; type: '2x1' | 'pct'; v?: number }
 export interface Outfit { sh: string; pa: string; sk: string; hair: string; long: number; bag: string }

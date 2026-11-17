@@ -85,3 +85,14 @@ describe('almacén de CSV', () => {
     clearData()
   })
 })
+
+describe('catálogo dinámico derivado del CSV', () => {
+  it('detecta cualquier cantidad de productos y toma el último precio disponible', async () => {
+    const { buildDynamicCatalog } = await import('../src/sim/dynamicCatalog')
+    const { sales } = parseSales('ticket,fecha,producto,cantidad,precio\n1,2026-08-01,Producto A,2,100\n2,2026-08-02,Producto A,1,120\n2,2026-08-02,Producto B,3,200')
+    const catalog = buildDynamicCatalog(sales, {})
+    expect(catalog).toHaveLength(2)
+    expect(catalog.find((p) => p.n === 'Producto A')).toMatchObject({ p: 120, costo: 66, units: 3, tickets: 2 })
+    expect(catalog.find((p) => p.n === 'Producto B')).toMatchObject({ p: 200, costo: 110 })
+  })
+})

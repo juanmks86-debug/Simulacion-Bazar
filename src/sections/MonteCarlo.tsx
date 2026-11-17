@@ -1,19 +1,25 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { histogram, monteCarlo } from '../sim/stats'
 import { money } from '../sim/calculator'
+import { useDynamicCatalog } from '../hooks/useDynamicCatalog'
 
 // Evaluación financiera Monte Carlo (10.000 escenarios). El gráfico es responsivo (Recharts).
 export default function MonteCarlo() {
+  const { products, data } = useDynamicCatalog()
   const [r, setR] = useState(() => monteCarlo())
+  useEffect(() => { setR(monteCarlo(Math.random, products)) }, [products])
+  const selected = [...products].filter((p) => p.p > 0).sort((a, b) => (b.tickets ?? 0) - (a.tickets ?? 0)).slice(0, 2)
+  const baseName = selected[0]?.n ?? 'producto base'
+  const addOnName = selected[1]?.n ?? baseName
   const [view, setView] = useState<'base' | 'eq'>('base')
   const histData = view === 'base' ? r.histDiff : r.histDiffEq
   const histMean = view === 'base' ? r.diffMean : r.diffMeanEq
   const bins = histogram(histData, 50)
-  const data = bins.map((b) => ({ mid: b.mid, count: b.count, label: money(b.mid) }))
-  const nearest = (v: number) => data.reduce((best, d) => (Math.abs(d.mid - v) < Math.abs(best.mid - v) ? d : best), data[0])
-  const meanBin = data.length ? nearest(histMean) : null
-  const zeroBin = data.length && data[0].mid <= 0 && data[data.length - 1].mid >= 0 ? nearest(0) : null
+  const chartData = bins.map((b) => ({ mid: b.mid, count: b.count, label: money(b.mid) }))
+  const nearest = (v: number) => chartData.reduce((best, d) => (Math.abs(d.mid - v) < Math.abs(best.mid - v) ? d : best), chartData[0])
+  const meanBin = chartData.length ? nearest(histMean) : null
+  const zeroBin = chartData.length && chartData[0].mid <= 0 && chartData[chartData.length - 1].mid >= 0 ? nearest(0) : null
 
   return (
     <div className="card card-highlight" id="montecarlo">
@@ -21,21 +27,21 @@ export default function MonteCarlo() {
         <div>
           <div className="eyebrow">Técnica Complementaria · Sección 10.2 &amp; 14.2</div>
           <h2>🎲 Evaluación Financiera Monte Carlo (10.000 Escenarios)</h2>
-          <div className="sub">Apriori descubre el combo candidato; Monte Carlo no lo valida: evalúa la robustez financiera de la propuesta bajo supuestos. Los porcentajes no son probabilidad de éxito real. Esta versión interactiva sortea nuevos escenarios en cada corrida, por lo que puede variar unos puntos respecto de las cifras fijas del informe.</div>
+          <div className="sub">Simulación financiera construida con los precios y costos del catálogo CSV. Se toman los productos con mayor frecuencia de tickets; los supuestos probabilísticos son escenarios de análisis, no predicciones ni probabilidades reales de éxito.</div>
         </div>
-        <button className="btn btn-gold" id="btnRunMC" onClick={() => setR(monteCarlo())}>▶ Re-ejecutar 10.000 Escenarios</button>
+        <button className="btn btn-gold" id="btnRunMC" onClick={() => setR(monteCarlo(Math.random, products))}>▶ Re-ejecutar 10.000 Escenarios</button>
       </div>
       <div className="sub" style={{ marginTop: 10 }}>
-        <b>Base simplificada (Sección 14.2):</b> combo activo (4 productos) contra la canasta vendida sola. Es una comparación favorable al combo por construcción.
+        <b>Base dinámica:</b> {baseName} como referencia individual{selected.length > 1 ? ` frente a un escenario combinado con ${addOnName}` : ' frente a una variante promocional del mismo producto' }. {data.sales.length ? `Dataset: ${data.fileName ?? 'CSV cargado'} · ${products.length} productos detectados.` : 'Cargá un CSV para adaptar los escenarios a sus productos.'}
       </div>
       <div className="mc-stats">
-        <div className="mc-kpi"><small>Media Canasta Sola (A)</small><b id="mcMeanA">{money(r.meanA)}</b></div>
-        <div className="mc-kpi"><small>Media Combo Activo (B)</small><b id="mcMeanB" style={{ color: '#79e29a' }}>{money(r.meanB)}</b></div>
+        <div className="mc-kpi"><small>Media producto base (A)</small><b id="mcMeanA">{money(r.meanA)}</b></div>
+        <div className="mc-kpi"><small>Media escenario combinado (B)</small><b id="mcMeanB" style={{ color: '#79e29a' }}>{money(r.meanB)}</b></div>
         <div className="mc-kpi"><small>Beneficio Neto a Favor</small><b id="mcDiff" style={{ color: 'var(--gold)' }}>+{money(r.diffMean)}</b></div>
-        <div className="mc-kpi"><small>Escenarios favorables (3x-6x)</small><b id="mcWin" style={{ color: '#60c572' }}>{r.winRate.toFixed(1)}%</b><small>Empates: {r.tieRate.toFixed(1)}% (sin combos vendidos)</small></div>
+        <div className="mc-kpi"><small>Escenarios favorables</small><b id="mcWin" style={{ color: '#60c572' }}>{r.winRate.toFixed(1)}%</b><small>Empates: {r.tieRate.toFixed(1)}% (sin combos vendidos)</small></div>
       </div>
       <div className="sub" style={{ marginTop: 10 }}>
-        <b>Control con línea base equivalente (Sección 14.2.7):</b> al escenario A se le suman los combos orgánicos (≈1,3 por mes) vendidos a precio pleno, de modo que la diferencia mide el margen <i>incremental</i> de la promoción.
+        <b>Control de línea base equivalente:</b> se incorpora una demanda orgánica simulada al escenario de referencia para comparar el margen incremental bajo los mismos supuestos.
       </div>
       <div className="mc-stats">
         <div className="mc-kpi"><small>Media sin combo (A equivalente)</small><b id="mcMeanAeq">{money(r.meanAeq)}</b></div>
@@ -45,7 +51,7 @@ export default function MonteCarlo() {
       </div>
       <div className="sub" style={{ marginTop: 6 }}>
         Variante conservadora (el margen del trío de alta rotación no se cuenta como incremental): {r.winRateCons.toFixed(1)}% favorables · {r.loseRateCons.toFixed(1)}% desfavorables · diferencia media +{money(r.diffMeanCons)}.
-        Punto de equilibrio del multiplicador de demanda: ≈1,4x (≈1,7x en la variante conservadora).
+        Los resultados dependen de los supuestos aleatorios y de los precios/costos utilizados en esta corrida.
       </div>
       <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
         <button className={view === 'base' ? 'btn btn-gold' : 'btn'} onClick={() => setView('base')}>Histograma: base simplificada</button>
@@ -53,13 +59,13 @@ export default function MonteCarlo() {
       </div>
       <div role="img" aria-label="Histograma de la diferencia de margen Monte Carlo" style={{ width: '100%', height: 220, marginTop: 8 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 16, right: 16, left: 0, bottom: 0 }} barCategoryGap={1}>
+          <BarChart data={chartData} margin={{ top: 16, right: 16, left: 0, bottom: 0 }} barCategoryGap={1}>
             <CartesianGrid stroke="#29445D" vertical={false} />
             <XAxis dataKey="label" tick={{ fill: '#A9BED0', fontSize: 10 }} interval={9} />
             <YAxis tick={{ fill: '#A9BED0', fontSize: 10 }} width={40} />
             <Tooltip contentStyle={{ background: '#14283D', border: '1px solid #29445D', color: '#F2F7FB' }} formatter={(v) => [v, 'Escenarios']} labelFormatter={(l) => `Diferencia ≈ ${l}`} />
             <Bar dataKey="count" isAnimationActive={false}>
-              {data.map((d) => (<Cell key={d.mid} fill={d.mid >= 0 ? '#3ea05d' : '#cf483d'} />))}
+              {chartData.map((d) => (<Cell key={d.mid} fill={d.mid >= 0 ? '#3ea05d' : '#cf483d'} />))}
             </Bar>
             {zeroBin && <ReferenceLine x={zeroBin.label} stroke="#cf483d" strokeWidth={2} label={{ value: 'Equilibrio ($0)', fill: '#cf483d', fontSize: 10, position: 'insideTopRight' }} />}
             {meanBin && <ReferenceLine x={meanBin.label} stroke="#d8b675" strokeWidth={2.5} strokeDasharray="4 4" label={{ value: `Media: +${money(histMean)}`, fill: '#d8b675', fontSize: 11, position: 'top' }} />}
@@ -68,7 +74,7 @@ export default function MonteCarlo() {
       </div>
       <div style={{ marginTop: "14px" }}>
         <h3 style={{ color: "#fff", fontSize: "12px", marginBottom: "6px" }}>
-          📊 Sensibilidad a los Supuestos del Modelo (Sección 14.2.2):
+          📊 Sensibilidad de referencia del modelo original (no recalculada con el CSV):
         </h3>
         <table className="custom-table">
           <thead>

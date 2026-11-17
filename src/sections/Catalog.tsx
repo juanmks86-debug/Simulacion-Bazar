@@ -1,44 +1,20 @@
 import CatalogRows from '../components/CatalogRows'
+import { useDynamicCatalog } from '../hooks/useDynamicCatalog'
 
-// Catálogo de productos y precios reales
 export default function Catalog() {
+  const { products, data } = useDynamicCatalog()
+  const high = products.filter((p) => p.rot === 'Alta').length
+  const low = products.length - high
   return (
     <div className="card" id="productos">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h2>
-          ▤ Catálogo de Productos y Precios Reales (Perico, Agosto 2026)
-        </h2>
-        <span className="sub">
-          10 productos · 5 alta rotación / 5 estancados
-        </span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <h2>▤ Catálogo dinámico de productos</h2>
+        <span className="sub">{products.length} productos · {high} alta rotación / {low} menor rotación</span>
       </div>
-      <div style={{ overflowX: "auto" }}>
+      <div className="sub" style={{ marginBottom: 10 }}>{data.fileName ? `Fuente: ${data.fileName}. Precio de venta tomado del registro más reciente disponible por producto. Costo inicial estimado al 55% del precio.` : 'El catálogo se genera al cargar un CSV.'}</div>
+      <div style={{ overflowX: 'auto' }}>
         <table className="custom-table">
-          <thead>
-            <tr>
-              <th>
-                Ítem
-              </th>
-              <th>
-                Nombre Comercial
-              </th>
-              <th>
-                Rotación
-              </th>
-              <th>
-                PVP Real
-              </th>
-              <th>
-                Costo Deducido
-              </th>
-              <th>
-                Margen Base
-              </th>
-              <th>
-                Rol en Estrategia
-              </th>
-            </tr>
-          </thead>
+          <thead><tr><th>Ítem</th><th>Producto</th><th>Rotación</th><th>Precio CSV</th><th>Costo editable</th><th>Margen editable</th><th>Rol</th><th>Origen</th></tr></thead>
           <tbody id="catalogTbody"><CatalogRows /></tbody>
         </table>
       </div>

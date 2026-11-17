@@ -13,17 +13,20 @@ export function useAnalysis(minSupport = 0.02, minConfidence = 0.3) {
   const analysis = useMemo(() => {
     if (!data.sales.length) return null
     const baskets = toBaskets(data.sales)
-    const itemsets = apriori(baskets, minSupport, 4)
+    const summary = summarize(data.sales)
+    // Limita la explosión combinatoria en catálogos amplios (p. ej. 50 productos).
+    const maxSize = summary.products > 20 ? 3 : 4
+    const itemsets = apriori(baskets, minSupport, maxSize)
     const rules = rulesFrom(itemsets, baskets.length, minConfidence)
-    const comparison = compareAlgorithms(baskets, minSupport, minConfidence, 4)
+    const comparison = compareAlgorithms(baskets, minSupport, minConfidence, maxSize)
     return {
       baskets,
-      summary: summarize(data.sales),
+      summary,
       rules,
       itemsets,
-      fpItemsets: fpGrowth(baskets, minSupport, 4),
+      fpItemsets: fpGrowth(baskets, minSupport, maxSize),
       combos: recommendCombos(itemsets, rules),
-      sensitivity: sensitivityAnalysis(baskets, [0.01, 0.015, 0.02, 0.03, 0.05], minConfidence),
+      sensitivity: sensitivityAnalysis(baskets, [0.01, 0.015, 0.02, 0.03, 0.05], minConfidence, maxSize),
       comparison,
       pack: packMesaMetrics(baskets),
     }
