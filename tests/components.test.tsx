@@ -28,8 +28,8 @@ describe('rutas', () => {
   })
   it('/montecarlo carga su gráfico bajo demanda', async () => {
     render(<MemoryRouter initialEntries={['/montecarlo']}><App /></MemoryRouter>)
-    expect(await screen.findByRole('heading', { name: /Monte Carlo \(10\.000 Escenarios\)/ }, { timeout: 20000 })).toBeInTheDocument()
-    expect(document.getElementById('mcMeanB')).toHaveTextContent('$')
+    expect(await screen.findByRole('heading', { name: /Monte Carlo dinámica/ }, { timeout: 20000 })).toBeInTheDocument()
+    expect(document.getElementById('montecarlo')).not.toBeNull()
   }, 30000)
   it('una ruta desconocida vuelve al inicio', () => {
     render(<MemoryRouter initialEntries={['/no-existe']}><App /></MemoryRouter>)
@@ -81,25 +81,46 @@ describe('estado de la simulación en pantalla', () => {
 import Datos from '../src/sections/Datos'
 import Informe from '../src/sections/Informe'
 import MonteCarlo from '../src/sections/MonteCarlo'
-import { clearData } from '../src/sim/dataStore'
+import { clearData, loadCsvText } from '../src/sim/dataStore'
 import { getParams } from '../src/sim/params'
 import { presentationStore, startPresentation, stopPresentation } from '../src/sim/presentation'
 import { money } from '../src/sim/calculator'
 
-describe('Monte Carlo: tabla consistente con los indicadores', () => {
-  it('la fila Caso Base muestra el mismo margen que “Media Combo Activo (B)”', () => {
+describe('Monte Carlo dinámico', () => {
+  const csv = () => {
+    const lines = ['ticket,fecha,producto,cantidad,precio']
+    for (let p = 0; p < 12; p++) for (let d = 1; d <= 20; d++) if ((p + d) % 3 !== 0) lines.push(`T${p}-${d},2026-09-${String(d).padStart(2, '0')},Producto ${p},${1 + ((p * d) % 3)},${1000 + p * 150}`)
+    return lines.join('\n')
+  }
+  it('sin datos pide cargar un CSV', () => {
+    clearData()
     render(<MonteCarlo />)
-    const headline = document.getElementById('mcMeanB')?.textContent
-    const baseRow = document.querySelector('#mcSensitivity tr[data-base="true"]')
-    expect(headline).toMatch(/^\$ /)
-    expect(baseRow).toHaveTextContent(headline as string)
-    expect(document.querySelectorAll('#mcSensitivity tbody tr')).toHaveLength(4)
+    expect(screen.getByText(/No hay productos con ventas y precio para simular/)).toBeInTheDocument()
   })
-  it('al re-ejecutar siguen coincidiendo', () => {
+  it('reconoce todos los productos del CSV y muestra escenarios, ranking y sensibilidad', () => {
+    act(() => { loadCsvText(csv(), 'prueba.csv') })
     render(<MonteCarlo />)
+    expect(screen.getByText(/12 productos simulados/)).toBeInTheDocument()
+    expect(screen.getByText(/A · Situación actual/)).toBeInTheDocument()
+    expect(screen.getByText(/B · Promoción con respuesta de demanda/)).toBeInTheDocument()
+    expect(screen.getByText(/C · Descuento sin aumento de demanda/)).toBeInTheDocument()
+    expect(screen.getAllByText(/Probabilidad de pérdida/).length).toBe(3)
+    expect(screen.getAllByText(/Probabilidad de superar la situación actual/).length).toBe(2)
+    const ranking = screen.getByText(/Ranking de productos/).nextElementSibling as HTMLElement
+    expect(ranking.querySelectorAll('tbody tr')).toHaveLength(12)
+    expect(screen.getByText(/Sensibilidad recalculada con tu CSV/)).toBeInTheDocument()
+  })
+  it('al cambiar los controles y ejecutar se aplican los nuevos parámetros', () => {
+    act(() => { loadCsvText(csv(), 'prueba.csv') })
+    render(<MonteCarlo />)
+    fireEvent.change(screen.getByLabelText('Cantidad de iteraciones'), { target: { value: '1000' } })
+    fireEvent.change(screen.getByLabelText('Horizonte de simulación'), { target: { value: '60' } })
+    fireEvent.change(screen.getByLabelText('Porcentaje de descuento'), { target: { value: '30' } })
     fireEvent.click(document.getElementById('btnRunMC') as HTMLElement)
-    const headline = document.getElementById('mcMeanB')?.textContent as string
-    expect(document.querySelector('#mcSensitivity tr[data-base="true"]')).toHaveTextContent(headline)
+    expect(screen.getByText(/1\.000/, { selector: 'b' })).toBeInTheDocument()
+    expect(screen.getByText(/60 días/)).toBeInTheDocument()
+    expect(screen.getByText(/30% de descuento/)).toBeInTheDocument()
+    act(() => clearData())
   })
 })
 
@@ -140,7 +161,7 @@ describe('Informe imprimible', () => {
     window.print = print
     render(<MemoryRouter><Informe /></MemoryRouter>)
     expect(screen.getByRole('heading', { name: /Informe de resultados/ })).toBeInTheDocument()
-    expect(document.getElementById('mcSensitivity')).toBeInTheDocument()
+    expect(document.getElementById('montecarlo')).toBeInTheDocument()
     expect(document.getElementById('calcPvpCombo')).toHaveTextContent(money(47750))
     fireEvent.click(document.getElementById('printReport') as HTMLElement)
     expect(print).toHaveBeenCalled()

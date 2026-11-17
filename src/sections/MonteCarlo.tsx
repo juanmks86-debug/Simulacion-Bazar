@@ -1,198 +1,199 @@
-import { useEffect, useState } from 'react'
-import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { histogram, monteCarlo } from '../sim/stats'
+import { useMemo, useState } from 'react'
+import { Bar, BarChart, CartesianGrid, Cell, Legend, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { histogram } from '../sim/stats'
 import { money } from '../sim/calculator'
 import { useDynamicCatalog } from '../hooks/useDynamicCatalog'
+import {
+  DEFAULT_PARAMS, buildDemand, overlayHistogram, sensitivityByUplift, simulate,
+  type McParams, type PromoScope, type ScenarioStats,
+} from '../sim/monteCarloDynamic'
 
-// Evaluación financiera Monte Carlo (10.000 escenarios). El gráfico es responsivo (Recharts).
+const pct = (n: number, d = 1) => n.toFixed(d).replace('.', ',') + '%'
+const frac = (n: number, d = 1) => pct(n * 100, d)
+const signed = (n: number) => (n >= 0 ? '+' : '−') + money(Math.abs(n))
+const SCOPES: Record<PromoScope, string> = { slow: 'Productos de baja rotación', fast: 'Productos de alta rotación', all: 'Todos los productos' }
+const TOOLTIP = { background: '#14283D', border: '1px solid #29445D', color: '#F2F7FB' }
+
+function ScenarioCard({ title, s, color }: { title: string; s: ScenarioStats; color?: string }) {
+  return (
+    <div className="mc-kpi" style={{ textAlign: 'left' }}>
+      <small style={{ color }}>{title}</small>
+      <b style={{ color: color ?? '#fff' }}>{money(s.mean)}</b>
+      <small>IC 95% de la media: {money(s.ciMean[0])} a {money(s.ciMean[1])}</small>
+      <small>Rango 95% simulado: {money(s.p025)} a {money(s.p975)}</small>
+      <small>Mínima {money(s.min)} · Máxima {money(s.max)}</small>
+      <small>Probabilidad de pérdida: <b style={{ display: 'inline', fontSize: 11, color: s.pLoss > 5 ? '#cf483d' : '#79e29a' }}>{pct(s.pLoss)}</b></small>
+      {s.pBeatActual !== null && <small>Probabilidad de superar la situación actual: <b style={{ display: 'inline', fontSize: 11, color: '#d8b675' }}>{pct(s.pBeatActual)}</b></small>}
+      <small>Ingresos medios {money(s.meanRevenue)} · rentabilidad {frac(s.marginPct)}</small>
+    </div>
+  )
+}
+
+// Evaluación financiera Monte Carlo dinámica: demanda, precios y costos salen del CSV y del catálogo cargado.
 export default function MonteCarlo() {
   const { products, data } = useDynamicCatalog()
-  const [r, setR] = useState(() => monteCarlo())
-  useEffect(() => { setR(monteCarlo(Math.random, products)) }, [products])
-  const selected = [...products].filter((p) => p.p > 0).sort((a, b) => (b.tickets ?? 0) - (a.tickets ?? 0)).slice(0, 2)
-  const baseName = selected[0]?.n ?? 'producto base'
-  const addOnName = selected[1]?.n ?? baseName
-  const [view, setView] = useState<'base' | 'eq'>('base')
-  const histData = view === 'base' ? r.histDiff : r.histDiffEq
-  const histMean = view === 'base' ? r.diffMean : r.diffMeanEq
-  const bins = histogram(histData, 50)
-  const chartData = bins.map((b) => ({ mid: b.mid, count: b.count, label: money(b.mid) }))
-  const nearest = (v: number) => chartData.reduce((best, d) => (Math.abs(d.mid - v) < Math.abs(best.mid - v) ? d : best), chartData[0])
-  const meanBin = chartData.length ? nearest(histMean) : null
-  const zeroBin = chartData.length && chartData[0].mid <= 0 && chartData[chartData.length - 1].mid >= 0 ? nearest(0) : null
+  const [draft, setDraft] = useState<McParams>(DEFAULT_PARAMS)
+  const [applied, setApplied] = useState<{ params: McParams; run: number }>({ params: DEFAULT_PARAMS, run: 0 })
+  const [showAll, setShowAll] = useState(false)
+
+  const summary = useMemo(
+    () => buildDemand(data.sales, products.map((p) => ({ id: p.id, name: p.n, price: p.p, cost: p.costo, rot: p.rot }))),
+    [data.sales, products],
+  )
+  const result = useMemo(() => simulate(summary.products, applied.params), [summary, applied])
+  const sens = useMemo(() => sensitivityByUplift(summary.products, applied.params), [summary, applied])
+  const set = <K extends keyof McParams>(k: K, v: McParams[K]) => setDraft((d) => ({ ...d, [k]: v }))
+  const run = () => setApplied((a) => ({ params: draft, run: a.run + 1 }))
+
+  const overlay = useMemo(() => result ? overlayHistogram(result.sample.actual, result.sample.promo, 40, (n) => money(n)) : [], [result])
+  const diffBins = useMemo(() => result ? histogram(result.sample.diffPromo, 50).map((b) => ({ mid: b.mid, count: b.count, label: money(b.mid) })) : [], [result])
+  const nearest = (v: number) => diffBins.reduce((best, d) => (Math.abs(d.mid - v) < Math.abs(best.mid - v) ? d : best), diffBins[0])
+  const zeroBin = diffBins.length && diffBins[0].mid <= 0 && diffBins[diffBins.length - 1].mid >= 0 ? nearest(0) : null
+  const diffMean = result ? result.promo.mean - result.actual.mean : 0
+  const meanBin = diffBins.length ? nearest(diffMean) : null
+  const rows = result ? (showAll ? result.products : result.products.slice(0, 15)) : []
+  const dirty = JSON.stringify(draft) !== JSON.stringify(applied.params)
 
   return (
     <div className="card card-highlight" id="montecarlo">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
-        <div>
-          <div className="eyebrow">Técnica Complementaria · Sección 10.2 &amp; 14.2</div>
-          <h2>🎲 Evaluación Financiera Monte Carlo (10.000 Escenarios)</h2>
-          <div className="sub">Simulación financiera construida con los precios y costos del catálogo CSV. Se toman los productos con mayor frecuencia de tickets; los supuestos probabilísticos son escenarios de análisis, no predicciones ni probabilidades reales de éxito.</div>
+      <div className="eyebrow">Técnica Complementaria · Sección 10.2 &amp; 14.2</div>
+      <h2>🎲 Evaluación Financiera Monte Carlo dinámica</h2>
+      <div className="sub">
+        Simula miles de escenarios con <b>todos los productos del CSV</b>: la demanda se estima con las unidades vendidas por día, y los precios y costos salen del catálogo (si el CSV no trae costos, se asume el margen del catálogo, editable en la pestaña Catálogo).
+        Los resultados son escenarios de análisis, no predicciones ni garantías.
+      </div>
+
+      {!data.sales.length || !summary.products.length ? (
+        <p className="sub" style={{ marginTop: 12, color: 'var(--warning)' }}>
+          No hay productos con ventas y precio para simular. Cargá un CSV con producto, cantidad y precio en Datos reales.
+        </p>
+      ) : <>
+        <div className="sub" style={{ marginTop: 10 }}>
+          Dataset: <b>{data.fileName ?? 'CSV cargado'}</b> · {summary.products.length} productos simulados · período observado: {summary.observedDays} días
+          {!summary.hasDates && <span style={{ color: 'var(--warning)' }}> (el CSV no tiene fechas válidas: se asumió {summary.observedDays} días y demanda Poisson)</span>}
+          {summary.hasDates && summary.observedDays < 14 && <span style={{ color: 'var(--warning)' }}> · período corto: la variabilidad estimada es poco confiable</span>}
+          {summary.excluded.length > 0 && <span> · excluidos: {summary.excluded.map((e) => `${e.name} (${e.reason})`).join(', ')}</span>}
         </div>
-        <button className="btn btn-gold" id="btnRunMC" onClick={() => setR(monteCarlo(Math.random, products))}>▶ Re-ejecutar 10.000 Escenarios</button>
-      </div>
-      <div className="sub" style={{ marginTop: 10 }}>
-        <b>Base dinámica:</b> {baseName} como referencia individual{selected.length > 1 ? ` frente a un escenario combinado con ${addOnName}` : ' frente a una variante promocional del mismo producto' }. {data.sales.length ? `Dataset: ${data.fileName ?? 'CSV cargado'} · ${products.length} productos detectados.` : 'Cargá un CSV para adaptar los escenarios a sus productos.'}
-      </div>
-      <div className="mc-stats">
-        <div className="mc-kpi"><small>Media producto base (A)</small><b id="mcMeanA">{money(r.meanA)}</b></div>
-        <div className="mc-kpi"><small>Media escenario combinado (B)</small><b id="mcMeanB" style={{ color: '#79e29a' }}>{money(r.meanB)}</b></div>
-        <div className="mc-kpi"><small>Beneficio Neto a Favor</small><b id="mcDiff" style={{ color: 'var(--gold)' }}>+{money(r.diffMean)}</b></div>
-        <div className="mc-kpi"><small>Escenarios favorables</small><b id="mcWin" style={{ color: '#60c572' }}>{r.winRate.toFixed(1)}%</b><small>Empates: {r.tieRate.toFixed(1)}% (sin combos vendidos)</small></div>
-      </div>
-      <div className="sub" style={{ marginTop: 10 }}>
-        <b>Control de línea base equivalente:</b> se incorpora una demanda orgánica simulada al escenario de referencia para comparar el margen incremental bajo los mismos supuestos.
-      </div>
-      <div className="mc-stats">
-        <div className="mc-kpi"><small>Media sin combo (A equivalente)</small><b id="mcMeanAeq">{money(r.meanAeq)}</b></div>
-        <div className="mc-kpi"><small>Beneficio incremental</small><b id="mcDiffEq" style={{ color: 'var(--gold)' }}>+{money(r.diffMeanEq)}</b></div>
-        <div className="mc-kpi"><small>Escenarios favorables</small><b id="mcWinEq" style={{ color: '#60c572' }}>{r.winRateEq.toFixed(1)}%</b></div>
-        <div className="mc-kpi"><small>Escenarios desfavorables</small><b id="mcLoseEq" style={{ color: '#cf483d' }}>{r.loseRateEq.toFixed(1)}%</b></div>
-      </div>
-      <div className="sub" style={{ marginTop: 6 }}>
-        Variante conservadora (el margen del trío de alta rotación no se cuenta como incremental): {r.winRateCons.toFixed(1)}% favorables · {r.loseRateCons.toFixed(1)}% desfavorables · diferencia media +{money(r.diffMeanCons)}.
-        Los resultados dependen de los supuestos aleatorios y de los precios/costos utilizados en esta corrida.
-      </div>
-      <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-        <button className={view === 'base' ? 'btn btn-gold' : 'btn'} onClick={() => setView('base')}>Histograma: base simplificada</button>
-        <button className={view === 'eq' ? 'btn btn-gold' : 'btn'} onClick={() => setView('eq')}>Histograma: línea base equivalente</button>
-      </div>
-      <div role="img" aria-label="Histograma de la diferencia de margen Monte Carlo" style={{ width: '100%', height: 220, marginTop: 8 }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 16, right: 16, left: 0, bottom: 0 }} barCategoryGap={1}>
-            <CartesianGrid stroke="#29445D" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: '#A9BED0', fontSize: 10 }} interval={9} />
-            <YAxis tick={{ fill: '#A9BED0', fontSize: 10 }} width={40} />
-            <Tooltip contentStyle={{ background: '#14283D', border: '1px solid #29445D', color: '#F2F7FB' }} formatter={(v) => [v, 'Escenarios']} labelFormatter={(l) => `Diferencia ≈ ${l}`} />
-            <Bar dataKey="count" isAnimationActive={false}>
-              {chartData.map((d) => (<Cell key={d.mid} fill={d.mid >= 0 ? '#3ea05d' : '#cf483d'} />))}
-            </Bar>
-            {zeroBin && <ReferenceLine x={zeroBin.label} stroke="#cf483d" strokeWidth={2} label={{ value: 'Equilibrio ($0)', fill: '#cf483d', fontSize: 10, position: 'insideTopRight' }} />}
-            {meanBin && <ReferenceLine x={meanBin.label} stroke="#d8b675" strokeWidth={2.5} strokeDasharray="4 4" label={{ value: `Media: +${money(histMean)}`, fill: '#d8b675', fontSize: 11, position: 'top' }} />}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-      <div style={{ marginTop: "14px" }}>
-        <h3 style={{ color: "#fff", fontSize: "12px", marginBottom: "6px" }}>
-          📊 Sensibilidad de referencia del modelo original (no recalculada con el CSV):
-        </h3>
-        <table className="custom-table">
-          <thead>
-            <tr>
-              <th>
-                Multiplicador de Demanda
-              </th>
-              <th>
-                Nivel de Promoción
-              </th>
-              <th>
-                Margen Mensual Promedio
-              </th>
-              <th>
-                % Favorables (base simplificada)
-              </th>
-              <th>
-                % Favorables (línea base equivalente)
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>
-                1x – 2x
-              </td>
-              <td>
-                Promoción débil
-              </td>
-              <td>
-                $ 87.639
-              </td>
-              <td>
-                <b>
-                  85,2%
-                </b>
-              </td>
-              <td>
-                <b>
-                  50,4%
-                </b>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                2x – 3x
-              </td>
-              <td>
-                Promoción moderada
-              </td>
-              <td>
-                $ 113.140
-              </td>
-              <td>
-                <b>
-                  95,9%
-                </b>
-              </td>
-              <td>
-                <b>
-                  71,3%
-                </b>
-              </td>
-            </tr>
-            <tr style={{ background: "var(--card-alt)" }}>
-              <td>
-                <b>
-                  3x – 6x (Caso base: supuesto)
-                </b>
-              </td>
-              <td>
-                <b>
-                  Promoción activa (usada en informe)
-                </b>
-              </td>
-              <td>
-                <b>
-                  $ 164.564
-                </b>
-              </td>
-              <td>
-                <b style={{ color: "var(--gold)" }}>
-                  99,4%
-                </b>
-              </td>
-              <td>
-                <b style={{ color: "var(--gold)" }}>
-                  90,3%
-                </b>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                6x – 9x
-              </td>
-              <td>
-                Promoción muy fuerte
-              </td>
-              <td>
-                $ 242.832
-              </td>
-              <td>
-                <b>
-                  100,0%
-                </b>
-              </td>
-              <td>
-                <b>
-                  98,7%
-                </b>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div className="sub" style={{ marginTop: 6 }}>
-          El multiplicador 3x–6x es un supuesto de caso base, no un dato observado ni un umbral calculado. Con la línea base equivalente el combo conviene solo si la promoción mueve la demanda por encima de ≈1,4x–1,7x; con una promoción débil (1x–2x) el resultado es casi un cara o cruz.
+
+        <div className="btns-group" style={{ gap: 14, flexWrap: 'wrap', margin: '14px 0', alignItems: 'flex-end' }}>
+          <label className="sub">Horizonte (días)
+            <select aria-label="Horizonte de simulación" value={draft.horizonDays} onChange={(e) => set('horizonDays', Number(e.target.value))}>
+              {[7, 15, 30, 60, 90, 180, 365].map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </label>
+          <label className="sub">Iteraciones
+            <select aria-label="Cantidad de iteraciones" value={draft.iterations} onChange={(e) => set('iterations', Number(e.target.value))}>
+              {[1000, 5000, 10000, 25000, 50000].map((v) => <option key={v} value={v}>{v.toLocaleString('es-AR')}</option>)}
+            </select>
+          </label>
+          <label className="sub">Incremento de demanda: <b>+{Math.round(draft.demandUplift * 100)}%</b>
+            <input aria-label="Incremento de demanda" type="range" min="0" max="300" step="5" value={Math.round(draft.demandUplift * 100)} onChange={(e) => set('demandUplift', Number(e.target.value) / 100)} />
+          </label>
+          <label className="sub">Descuento: <b>{Math.round(draft.discount * 100)}%</b>
+            <input aria-label="Porcentaje de descuento" type="range" min="0" max="60" step="1" value={Math.round(draft.discount * 100)} onChange={(e) => set('discount', Number(e.target.value) / 100)} />
+          </label>
+          <label className="sub">Promoción sobre
+            <select aria-label="Alcance de la promoción" value={draft.scope} onChange={(e) => set('scope', e.target.value as PromoScope)}>
+              {(Object.keys(SCOPES) as PromoScope[]).map((k) => <option key={k} value={k}>{SCOPES[k]}</option>)}
+            </select>
+          </label>
+          <label className="sub">Costos fijos del período ($)
+            <input aria-label="Costos fijos del período" type="number" min="0" step="1000" value={draft.fixedCosts} onChange={(e) => set('fixedCosts', Math.max(0, Number(e.target.value) || 0))} style={{ width: 110 }} />
+          </label>
+          <button className="btn btn-gold" id="btnRunMC" onClick={run}>▶ {dirty ? 'Aplicar y ejecutar' : 'Re-ejecutar'} {draft.iterations.toLocaleString('es-AR')} escenarios</button>
         </div>
-      </div>
+
+        {result && <>
+          <div className="sub">
+            Se simularon <b>{result.params.iterations.toLocaleString('es-AR')}</b> escenarios de <b>{result.params.horizonDays} días</b>.
+            Promoción: <b>{frac(result.params.discount, 0)} de descuento</b> con <b>+{Math.round(result.params.demandUplift * 100)}% de demanda</b> sobre {SCOPES[result.params.scope].toLowerCase()} ({result.promotedCount} de {result.products.length}).
+            {result.promotedCount === 0 && <span style={{ color: 'var(--warning)' }}> Ningún producto entra en ese alcance: la promoción no cambia nada.</span>}
+          </div>
+          <div className="mc-stats" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', marginTop: 10 }}>
+            <ScenarioCard title="A · Situación actual (sin promoción)" s={result.actual} />
+            <ScenarioCard title="B · Promoción con respuesta de demanda" s={result.promo} color="#79e29a" />
+            <ScenarioCard title="C · Descuento sin aumento de demanda (riesgo)" s={result.discountOnly} color="#d8b675" />
+          </div>
+          <div className="sub" style={{ marginTop: 8 }}>
+            Ganancia = ingresos − costos − costos fijos. Variaciones simuladas: ventas (Poisson o Binomial negativa según la dispersión de cada producto), precios (±{frac(Math.max(...summary.products.map((p) => p.priceCV)), 0)} como máximo, según el CSV, con un piso del 2%) y costos (±{frac(result.params.costSd, 0)}).
+            La promoción B suma ventas extra sobre la demanda base de cada escenario; el escenario C muestra qué pasa si el descuento no mueve las ventas.
+            Beneficio medio de B frente a A: <b style={{ color: diffMean >= 0 ? '#79e29a' : '#cf483d' }}>{signed(diffMean)}</b>.
+          </div>
+
+          <h3 style={{ color: '#fff', fontSize: 12, margin: '16px 0 6px' }}>📈 Distribución de la ganancia: situación actual (A) vs promoción (B)</h3>
+          <div role="img" aria-label="Histograma comparativo de ganancia entre la situación actual y la promoción" style={{ width: '100%', height: 240 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={overlay} margin={{ top: 8, right: 16, left: 0, bottom: 0 }} barCategoryGap={1}>
+                <CartesianGrid stroke="#29445D" vertical={false} />
+                <XAxis dataKey="label" tick={{ fill: '#A9BED0', fontSize: 10 }} interval={7} />
+                <YAxis tick={{ fill: '#A9BED0', fontSize: 10 }} width={40} />
+                <Tooltip contentStyle={TOOLTIP} labelFormatter={(l) => `Ganancia ≈ ${l}`} />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="a" name="A · actual" fill="#6f8fb0" isAnimationActive={false} fillOpacity={0.85} />
+                <Bar dataKey="b" name="B · promoción" fill="#3ea05d" isAnimationActive={false} fillOpacity={0.75} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <h3 style={{ color: '#fff', fontSize: 12, margin: '16px 0 6px' }}>⚖️ Diferencia de ganancia por escenario (B − A)</h3>
+          <div role="img" aria-label="Histograma de la diferencia de ganancia B menos A" style={{ width: '100%', height: 220 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={diffBins} margin={{ top: 16, right: 16, left: 0, bottom: 0 }} barCategoryGap={1}>
+                <CartesianGrid stroke="#29445D" vertical={false} />
+                <XAxis dataKey="label" tick={{ fill: '#A9BED0', fontSize: 10 }} interval={9} />
+                <YAxis tick={{ fill: '#A9BED0', fontSize: 10 }} width={40} />
+                <Tooltip contentStyle={TOOLTIP} formatter={(v) => [v, 'Escenarios']} labelFormatter={(l) => `Diferencia ≈ ${l}`} />
+                <Bar dataKey="count" isAnimationActive={false}>
+                  {diffBins.map((d) => (<Cell key={d.mid} fill={d.mid >= 0 ? '#3ea05d' : '#cf483d'} />))}
+                </Bar>
+                {zeroBin && <ReferenceLine x={zeroBin.label} stroke="#cf483d" strokeWidth={2} label={{ value: 'Equilibrio ($0)', fill: '#cf483d', fontSize: 10, position: 'insideTopRight' }} />}
+                {meanBin && <ReferenceLine x={meanBin.label} stroke="#d8b675" strokeWidth={2.5} strokeDasharray="4 4" label={{ value: `Media: ${signed(diffMean)}`, fill: '#d8b675', fontSize: 11, position: 'top' }} />}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <h3 style={{ color: '#fff', fontSize: 12, margin: '16px 0 6px' }}>🏆 Ranking de productos por rentabilidad esperada</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="custom-table">
+              <thead><tr><th>#</th><th>Producto</th><th>Demanda</th><th>Unidades esperadas</th><th>Margen unitario</th><th>Ganancia esperada (A)</th><th>Variabilidad (desvío)</th><th>Con promoción (B)</th><th>Efecto promo</th></tr></thead>
+              <tbody>
+                {rows.map((p, i) => (
+                  <tr key={p.id}>
+                    <td>{i + 1}</td><td>{p.name}</td>
+                    <td>{p.model === 'negbin' ? 'Binomial negativa' : 'Poisson'}</td>
+                    <td>{p.meanUnits.toFixed(1).replace('.', ',')}</td>
+                    <td>{frac(p.unitMarginPct, 0)}</td>
+                    <td><b>{money(p.profitActual)}</b></td>
+                    <td>± {money(p.sdActual)}</td>
+                    <td>{p.promoted ? money(p.profitPromo) : '—'}</td>
+                    <td style={{ color: !p.promoted ? undefined : p.delta >= 0 ? '#79e29a' : '#cf483d' }}>{p.promoted ? signed(p.delta) : 'sin promoción'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {result.products.length > 15 && (
+            <button className="btn" style={{ marginTop: 8 }} onClick={() => setShowAll((v) => !v)}>{showAll ? 'Ver solo los 15 primeros' : `Ver los ${result.products.length} productos`}</button>
+          )}
+
+          <h3 style={{ color: '#fff', fontSize: 12, margin: '16px 0 6px' }}>📊 Sensibilidad recalculada con tu CSV: ¿cuánta demanda extra necesita la promoción?</h3>
+          <table className="custom-table" id="mcSensitivity">
+            <thead><tr><th>Incremento de demanda</th><th>Ganancia media (B)</th><th>Diferencia vs actual</th><th>Prob. de superar la situación actual</th><th>Prob. de pérdida (B)</th></tr></thead>
+            <tbody>
+              {sens.map((r) => (
+                <tr key={r.uplift} style={Math.abs(r.uplift - applied.params.demandUplift) < 1e-9 ? { background: 'var(--card-alt)' } : undefined}>
+                  <td>+{Math.round(r.uplift * 100)}%</td><td>{money(r.meanPromo)}</td>
+                  <td style={{ color: r.meanDiff >= 0 ? '#79e29a' : '#cf483d' }}>{signed(r.meanDiff)}</td>
+                  <td><b>{pct(r.pBeat)}</b></td><td>{pct(r.pLoss)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="sub" style={{ marginTop: 6 }}>
+            Con el descuento y el alcance elegidos, esta tabla muestra a partir de qué incremento de demanda la promoción empieza a convenir. Se calcula con 2.000 escenarios por fila y cambia con cada dataset.
+          </div>
+        </>}
+      </>}
     </div>
   )
 }
