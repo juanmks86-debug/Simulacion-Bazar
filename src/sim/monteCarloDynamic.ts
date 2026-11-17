@@ -110,13 +110,14 @@ const drawDemand = (p: ProductDemand, horizon: number, rand: () => number): numb
 }
 
 /* ---------- Simulación ---------- */
-export type PromoScope = 'all' | 'slow' | 'fast'
+export type PromoScope = 'all' | 'slow' | 'fast' | 'custom'
 export interface McParams {
   horizonDays: number      // horizonte de simulación
   iterations: number       // cantidad de escenarios
   demandUplift: number     // incremento de demanda por la promoción (0,5 = +50%)
   discount: number         // descuento de la promoción (0,15 = 15%)
-  scope: PromoScope        // a qué productos se aplica la promoción
+  scope: PromoScope        // a qué productos se aplica la promoción ('custom' usa productIds)
+  productIds?: string[]    // productos elegidos cuando scope = 'custom'
   fixedCosts: number       // costos fijos del período (se restan de la ganancia)
   costSd: number           // variabilidad de costos (desvío relativo)
 }
@@ -171,7 +172,8 @@ export function simulate(products: ProductDemand[], params: McParams, rand: () =
   const n = Math.max(100, Math.floor(params.iterations))
   const H = Math.max(1, params.horizonDays)
   const u = Math.max(0, params.demandUplift), d = Math.min(0.95, Math.max(0, params.discount))
-  const promoted = products.map((p) => params.scope === 'all' || (params.scope === 'slow' && p.rot === 'Estancado') || (params.scope === 'fast' && p.rot === 'Alta'))
+  const chosen = new Set(params.productIds ?? [])
+  const promoted = products.map((p) => params.scope === 'all' || (params.scope === 'slow' && p.rot === 'Estancado') || (params.scope === 'fast' && p.rot === 'Alta') || (params.scope === 'custom' && chosen.has(p.id)))
   const m = products.length
   const pA = new Float64Array(n), pB = new Float64Array(n), pC = new Float64Array(n)
   let revA = 0, revB = 0, revC = 0, beatB = 0, beatC = 0

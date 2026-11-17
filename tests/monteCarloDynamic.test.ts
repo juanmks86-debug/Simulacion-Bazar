@@ -81,6 +81,12 @@ describe('simulate', () => {
     const f = fixture(50)
     expect(simulate(buildDemand(f.sales, f.catalog).products, { ...DEFAULT_PARAMS, iterations: 1000 }, seeded(8))!.products).toHaveLength(50)
   })
+  it('el alcance «productos elegidos» solo promociona los ids indicados', () => {
+    const r = simulate(products, { ...DEFAULT_PARAMS, scope: 'custom', productIds: ['p3', 'p4'], iterations: 500 }, seeded(12))!
+    expect(r.promotedCount).toBe(2)
+    expect(r.products.filter((p) => p.promoted).map((p) => p.id).sort()).toEqual(['p3', 'p4'])
+    expect(simulate(products, { ...DEFAULT_PARAMS, scope: 'custom', productIds: [], iterations: 500 }, seeded(12))!.promotedCount).toBe(0)
+  })
   it('la sensibilidad crece con el incremento de demanda', () => {
     const rows = sensitivityByUplift(products, { ...DEFAULT_PARAMS, scope: 'all', discount: 0.2 }, [0, 1, 3], seeded(6), 1500)
     expect(rows[2].meanDiff).toBeGreaterThan(rows[0].meanDiff)

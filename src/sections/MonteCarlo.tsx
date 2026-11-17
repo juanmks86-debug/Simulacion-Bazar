@@ -11,7 +11,8 @@ import {
 const pct = (n: number, d = 1) => n.toFixed(d).replace('.', ',') + '%'
 const frac = (n: number, d = 1) => pct(n * 100, d)
 const signed = (n: number) => (n >= 0 ? '+' : '−') + money(Math.abs(n))
-const SCOPES: Record<PromoScope, string> = { slow: 'Productos de baja rotación', fast: 'Productos de alta rotación', all: 'Todos los productos' }
+const SCOPES: Record<PromoScope, string> = { slow: 'Productos de baja rotación', fast: 'Productos de alta rotación', all: 'Todos los productos', custom: 'Productos elegidos' }
+const SCOPE_OPTIONS: PromoScope[] = ['slow', 'fast', 'all']
 const TOOLTIP = { background: '#14283D', border: '1px solid #29445D', color: '#F2F7FB' }
 
 function ScenarioCard({ title, s, color }: { title: string; s: ScenarioStats; color?: string }) {
@@ -94,7 +95,7 @@ export default function MonteCarlo() {
           </label>
           <label className="sub">Promoción sobre
             <select aria-label="Alcance de la promoción" value={draft.scope} onChange={(e) => set('scope', e.target.value as PromoScope)}>
-              {(Object.keys(SCOPES) as PromoScope[]).map((k) => <option key={k} value={k}>{SCOPES[k]}</option>)}
+              {SCOPE_OPTIONS.map((k) => <option key={k} value={k}>{SCOPES[k]}</option>)}
             </select>
           </label>
           <label className="sub">Costos fijos del período ($)

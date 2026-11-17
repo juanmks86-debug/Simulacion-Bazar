@@ -188,3 +188,59 @@ describe('Modo presentación', () => {
     expect(document.body.classList.contains('presenting')).toBe(false)
   })
 })
+
+describe('Calculadora y Escenarios con un CSV cargado', () => {
+  const csv = () => {
+    const lines = ['ticket,fecha,producto,cantidad,precio']
+    for (let d = 1; d <= 20; d++) {
+      lines.push(`A${d},2026-09-${String(d).padStart(2, '0')},Cuchillo,1,6500`, `A${d},2026-09-${String(d).padStart(2, '0')},Tabla,1,9000`)
+      if (d % 2) lines.push(`B${d},2026-09-${String(d).padStart(2, '0')},Colador,1,5500`)
+      if (d % 4 === 0) lines.push(`C${d},2026-09-${String(d).padStart(2, '0')},Termo,1,32000`)
+    }
+    return lines.join('\n')
+  }
+  it('la calculadora arma el pack con la regla más frecuente del CSV', () => {
+    act(() => { loadCsvText(csv(), 'calc.csv') })
+    render(<Calculator />)
+    expect(screen.getByLabelText('Incluir Cuchillo')).toBeChecked()
+    expect(screen.getByLabelText('Incluir Tabla')).toBeChecked()
+    expect(screen.getByLabelText('Incluir Colador')).not.toBeChecked()
+    expect(document.getElementById('calcPvpReg')).toHaveTextContent(money(15500))
+    fireEvent.change(document.getElementById('calcDescRange') as HTMLInputElement, { target: { value: '20' } })
+    expect(document.getElementById('calcDescVal')).toHaveTextContent('20')
+    expect(document.getElementById('calcPvpCombo')).not.toHaveTextContent(money(15500))
+    fireEvent.click(screen.getByLabelText('Incluir Colador'))
+    expect(document.getElementById('calcPvpReg')).toHaveTextContent(money(21000))
+    act(() => clearData())
+  })
+  it('sin CSV la calculadora mantiene el Pack Mesa original', () => {
+    clearData()
+    render(<Calculator />)
+    expect(screen.getByText('$ 47.750')).toBeInTheDocument()
+  })
+  it('los escenarios se calculan, se guardan por dataset y se comparan', () => {
+    act(() => { loadCsvText(csv(), 'esc.csv') })
+    render(<Scenarios />)
+    expect(screen.getByText(/Aún no hay escenarios comerciales/)).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Descuento del escenario'), { target: { value: '10' } })
+    fireEvent.click(document.getElementById('saveDynamicScenario') as HTMLElement)
+    fireEvent.change(screen.getByLabelText('Descuento del escenario'), { target: { value: '30' } })
+    fireEvent.change(screen.getByLabelText('Incremento de demanda del escenario'), { target: { value: '0' } })
+    fireEvent.click(document.getElementById('saveDynamicScenario') as HTMLElement)
+    expect(document.querySelectorAll('#scenarioDynamicList tbody tr')).toHaveLength(2)
+    expect(screen.getByText(/10% OFF/)).toBeInTheDocument()
+    expect(screen.getByText(/30% OFF · \+0% demanda/)).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('Quitar escenario 1'))
+    expect(document.querySelectorAll('#scenarioDynamicList tbody tr')).toHaveLength(1)
+    act(() => clearData())
+  })
+  it('el alcance «productos elegidos» exige elegir al menos un producto', () => {
+    act(() => { loadCsvText(csv(), 'esc2.csv') })
+    render(<Scenarios />)
+    fireEvent.change(screen.getByLabelText('Alcance del escenario'), { target: { value: 'custom' } })
+    expect(document.getElementById('saveDynamicScenario')).toBeDisabled()
+    fireEvent.click(screen.getByLabelText('Promocionar Colador'))
+    expect(document.getElementById('saveDynamicScenario')).not.toBeDisabled()
+    act(() => clearData())
+  })
+})
