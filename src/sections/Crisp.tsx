@@ -12,13 +12,13 @@ export default function Crisp() {
       <h2>🔄 Fases de CRISP-DM Mapeadas en el Informe</h2>
       <div className="crisp-steps">
         {NAMES.map((n, i) => (
-          <div key={n} className={`crisp-step${i === idx ? ' active' : ''}`} onClick={() => setIdx(i)}>
+          <button type="button" key={n} className={`crisp-step${i === idx ? ' active' : ''}`} aria-pressed={i === idx} onClick={() => setIdx(i)}>
             <div className="crisp-num">{i + 1}</div>
             <div className="crisp-name">{n}</div>
-          </div>
+          </button>
         ))}
       </div>
-      <div className="card" id="crispDetail" style={{ marginTop: 10, background: '#0d1711', borderColor: '#263a2b' }}>
+      <div className="card" id="crispDetail" style={{ marginTop: 10, background: 'var(--card-alt)', borderColor: 'var(--bd)' }}>
         <h3 id="crispTitle">{crispData[idx].t}</h3>
         <p className="sub" id="crispText" style={{ fontSize: 12, margin: 0, lineHeight: 1.6 }}>{crispData[idx].d}</p>
       </div>

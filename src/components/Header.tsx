@@ -22,7 +22,7 @@ export default function Header() {
         </div>
       </div>
       <div className="toolbar">
-        <button className="btn btn-gold" id="toggleZenBtn" onClick={toggleCollapsed}>{collapsed ? '▶ Mostrar Menú' : '◀ Expandir Canvas'}</button>
+        <button className="btn btn-gold" id="toggleZenBtn" onClick={toggleCollapsed} aria-label={collapsed ? 'Mostrar menú lateral' : 'Contraer menú lateral'}>{collapsed ? '▶ Mostrar Menú' : '◀ Contraer Menú'}</button>
         <button className="btn btn-primary" id="go" onClick={() => controller.setRunning(true)}>▶ Iniciar</button>
         <button className="btn" id="pa" onClick={() => controller.setRunning(false)}>⏸ Pausar</button>
         <button className="btn" id="re" onClick={() => controller.reset()}>↻ Reiniciar</button>

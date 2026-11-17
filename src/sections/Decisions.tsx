@@ -53,7 +53,7 @@ export default function Decisions() {
 
       <div style={{ display: 'grid', gap: 10, marginTop: 14 }}>
         {opportunities.map((o, index) => (
-          <article key={o.products.map((p) => p.id).sort().join('-')} style={{ border: '1px solid #314735', borderRadius: 10, padding: 12, background: 'rgba(17,35,24,.55)' }}>
+          <article key={o.products.map((p) => p.id).sort().join('-')} style={{ border: '1px solid var(--bd)', borderRadius: 10, padding: 12, background: 'var(--card-alt)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
               <div><b style={{ color: 'var(--gold)' }}>#{index + 1} · {o.products.map((p) => `${p.e} ${p.n}`).join(' + ')}</b><div className="sub">{o.count} tickets · soporte {pct(o.support)} · confianza {pct(o.confidence)} · lift {o.lift.toFixed(2).replace('.', ',')}×</div></div>
               <div style={{ textAlign: 'right' }}><small className="sub">Precio regular conjunto</small><div><b>{money(o.revenue)}</b></div></div>
@@ -68,7 +68,7 @@ export default function Decisions() {
           </article>
         ))}
       </div>
-      <div className="sub" style={{ marginTop: 12, borderTop: '1px solid #29402e', paddingTop: 10 }}><b>Cómo interpretar:</b> lift superior a 1 indica asociación positiva en los tickets observados, no causalidad. La evaluación financiera supone vender todos los artículos del combo al precio de catálogo y aplicar el descuento al total del combo. Verificá precios, costos y stock antes de ejecutar una promoción.</div>
+      <div className="sub" style={{ marginTop: 12, borderTop: '1px solid var(--bd)', paddingTop: 10 }}><b>Cómo interpretar:</b> lift superior a 1 indica asociación positiva en los tickets observados, no causalidad. La evaluación financiera supone vender todos los artículos del combo al precio de catálogo y aplicar el descuento al total del combo. Verificá precios, costos y stock antes de ejecutar una promoción.</div>
     </div>
   )
 }

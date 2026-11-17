@@ -60,7 +60,7 @@ export function PackMesaCheck({ pack }: { pack: PackMesaMetrics }) {
           <td>Informe: Platos + Servilletero + Tazas ➜ Canasta</td>
           <td>2,13% (4/188)</td><td>57,1%</td><td>3,47×</td><td>4 de 7</td>
         </tr>
-        <tr style={{ background: '#192c1f' }}>
+        <tr style={{ background: 'var(--card-alt)' }}>
           <td><b>Tus datos: Platos + Servilletero + Tazas ➜ Canasta</b></td>
           <td>{p ? pctEs(p.support, 2) : '—'}</td>
           <td><b>{p?.confidence != null ? pctEs(p.confidence) : 'sin casos'}</b></td>

@@ -22,14 +22,14 @@ export default function Controls() {
     <div className="card" id="controles" style={{ marginBottom: 14 }}>
       <h2>Control del Flujo Comercial</h2>
       <div className="btns-group">
-        <button className="btn" id="so" style={{ background: '#ad6a28' }} onClick={() => controller.toggleSound()}>
+        <button className="btn btn-secondary" id="so" onClick={() => controller.toggleSound()}>
           🔊 Sonido: {sound ? 'SÍ' : 'NO'}
         </button>
         <select
           id="sP"
           value={promo}
           onChange={(e) => setParam('sP', e.target.value as PromoChoice)}
-          style={{ background: '#0f1a12', color: '#fff', border: '1px solid #2d4533', borderRadius: 8, padding: 7, fontSize: 12 }}
+          className="control-select"
         >
           <option value="auto">Promoción: Automática por horario</option>
           <option value="tazas">2x1 en Tazas de café (Mañana)</option>

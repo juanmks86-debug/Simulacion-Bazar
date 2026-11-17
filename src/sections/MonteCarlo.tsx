@@ -54,10 +54,10 @@ export default function MonteCarlo() {
       <div role="img" aria-label="Histograma de la diferencia de margen Monte Carlo" style={{ width: '100%', height: 220, marginTop: 8 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} margin={{ top: 16, right: 16, left: 0, bottom: 0 }} barCategoryGap={1}>
-            <CartesianGrid stroke="#233628" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: '#a6b7a8', fontSize: 10 }} interval={9} />
-            <YAxis tick={{ fill: '#a6b7a8', fontSize: 10 }} width={40} />
-            <Tooltip contentStyle={{ background: '#15221a', border: '1px solid #2b3f30', color: '#f5f3eb' }} formatter={(v) => [v, 'Escenarios']} labelFormatter={(l) => `Diferencia ≈ ${l}`} />
+            <CartesianGrid stroke="#29445D" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: '#A9BED0', fontSize: 10 }} interval={9} />
+            <YAxis tick={{ fill: '#A9BED0', fontSize: 10 }} width={40} />
+            <Tooltip contentStyle={{ background: '#14283D', border: '1px solid #29445D', color: '#F2F7FB' }} formatter={(v) => [v, 'Escenarios']} labelFormatter={(l) => `Diferencia ≈ ${l}`} />
             <Bar dataKey="count" isAnimationActive={false}>
               {data.map((d) => (<Cell key={d.mid} fill={d.mid >= 0 ? '#3ea05d' : '#cf483d'} />))}
             </Bar>
@@ -133,7 +133,7 @@ export default function MonteCarlo() {
                 </b>
               </td>
             </tr>
-            <tr style={{ background: "#192c1f" }}>
+            <tr style={{ background: "var(--card-alt)" }}>
               <td>
                 <b>
                   3x – 6x (Caso base: supuesto)

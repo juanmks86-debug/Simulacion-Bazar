@@ -55,13 +55,17 @@ export default function Sidebar() {
 
   const closeMenu = () => uiStore.publish({ menuOpen: false })
   const onToggle = () => {
-    if (collapsed) uiStore.publish({ collapsed: false })
-    else uiStore.publish({ menuOpen: !menuOpen })
+    if (collapsed) {
+      const isMobile = window.matchMedia('(max-width: 1050px)').matches
+      uiStore.publish({ collapsed: false, menuOpen: isMobile })
+      return
+    }
+    uiStore.publish({ menuOpen: !menuOpen })
   }
 
   return (
     <>
-      <button className="menu-toggle" id="menuToggle" aria-label="Abrir menú" aria-expanded={menuOpen} onClick={onToggle}>
+      <button className="menu-toggle" id="menuToggle" aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"} aria-expanded={menuOpen} onClick={onToggle}>
         {menuOpen ? '✕' : '☰'}
       </button>
 
@@ -130,7 +134,7 @@ export default function Sidebar() {
           <small>Simulacion-Bazar · Fase 4</small>
         </div>
 
-        <button className="side-collapse" id="collapseSideBtn" onClick={toggleCollapsed}>
+        <button className="side-collapse" id="collapseSideBtn" onClick={toggleCollapsed} aria-label={collapsed ? "Mostrar navegación" : "Contraer navegación"}>
           {collapsed ? '▶ Mostrar menú' : '◀ Contraer menú'}
         </button>
       </aside>

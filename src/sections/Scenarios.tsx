@@ -14,7 +14,7 @@ export default function Scenarios() {
       <div className="sub" id="scenarioList" style={{ maxHeight: 170, overflowY: 'auto' }}>
         {list.length === 0 && 'Todavía no guardaste escenarios.'}
         {list.map((a, i) => (
-          <div key={i} style={{ padding: '6px 0', borderBottom: '1px solid #1e2f22', display: 'flex', justifyContent: 'space-between' }}>
+          <div key={i} style={{ padding: '6px 0', borderBottom: '1px solid var(--bd)', display: 'flex', justifyContent: 'space-between' }}>
             <div>
               <b>{i + 1}. {a.promo}</b><br />
               <small style={{ color: 'var(--mu)' }}>Combo {a.comboProb}% · Canasta {a.basketProb}% · {a.visits} visitas · {a.combos} packs</small>
